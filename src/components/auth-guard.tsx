@@ -1,6 +1,7 @@
+
 "use client";
 
-import React, { useEffect, ReactNode } from 'react';
+import React, { useEffect, ReactNode, useState } from 'react'; // Added useState
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -8,23 +9,27 @@ import { Skeleton } from '@/components/ui/skeleton';
 export function AuthGuard({ children }: { children: ReactNode }) {
   const { isAuthenticated, user } = useAuth();
   const router = useRouter();
+  const [isClientHydrated, setIsClientHydrated] = useState(false);
 
   useEffect(() => {
-    // Wait until auth state is determined (user is not undefined)
-    // This effect will run on the client after hydration.
-    if (user !== undefined) {
+    setIsClientHydrated(true); // Mark that client has hydrated
+  }, []);
+
+  useEffect(() => {
+    // Redirect logic, only run after client hydration and auth state is determined
+    if (isClientHydrated && user !== undefined) { // user !== undefined to ensure auth state is resolved
       if (!isAuthenticated) {
         router.replace('/login');
       }
     }
-  }, [isAuthenticated, router, user]);
+  }, [isAuthenticated, router, user, isClientHydrated]);
 
-  // If user auth state is still loading (user is undefined),
-  // OR if user is determined to be not authenticated (in which case a redirect from useEffect is pending),
-  // render a loading skeleton.
-  // This ensures the server render (where user is initially null, thus !isAuthenticated is true)
-  // and the initial client render (where user might be undefined) output the same skeleton.
-  if (user === undefined || !isAuthenticated) {
+  // To prevent hydration mismatch:
+  // 1. If not yet client-hydrated, render skeleton (matches server output).
+  // 2. If client-hydrated but auth state is still "loading" (user is undefined by context's own logic, though our useAuth doesn't set it to undefined)
+  //    OR user is not authenticated, render skeleton.
+  //    The router.replace in useEffect will handle the redirect.
+  if (!isClientHydrated || (user === undefined && isClientHydrated) || !isAuthenticated) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-background">
         <div className="space-y-4 w-1/2 p-4 max-w-md"> {/* Consistent with typical loading screens */}
@@ -36,7 +41,6 @@ export function AuthGuard({ children }: { children: ReactNode }) {
     );
   }
   
-  // Only if user is defined and authenticated, render children.
-  // This will happen on the client after auth state is confirmed.
+  // Only render children if client has hydrated AND user is defined AND authenticated.
   return <>{children}</>;
 }
