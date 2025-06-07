@@ -1,3 +1,4 @@
+
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
@@ -37,6 +38,16 @@ const nextConfig: NextConfig = {
   // If 'async_hooks' issues persist with Turbopack, a different approach for this Next.js
   // version might be needed, or it could indicate a bug in Next.js 15.3.3 config handling.
   // The Webpack fallback for 'async_hooks' remains.
+  ...(process.env.NODE_ENV === 'development' && {
+    devIndicators: {
+      buildActivityPosition: 'bottom-right',
+    },
+    experimental: {
+        allowedDevOrigins: [
+            'https://6000-firebase-studio-1749331662472.cluster-joak5ukfbnbyqspg4tewa33d24.cloudworkstations.dev',
+        ],
+    }
+  }),
 };
 
 export default nextConfig;
