@@ -58,7 +58,7 @@ export function MessageList() {
     : null;
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col flex-1 overflow-hidden"> {/* Changed: flex-1 and overflow-hidden added */}
       <ScrollArea className="flex-1 p-4" ref={scrollAreaRef} viewportRef={viewportRef}>
         <div className="space-y-4">
           {filteredMessages.map(message => (
@@ -78,7 +78,7 @@ export function MessageList() {
         </div>
       </ScrollArea>
       {typingUsersText && (
-        <div className="p-2 px-4 text-xs text-muted-foreground h-6 flex items-center">
+        <div className="p-2 px-4 text-xs text-muted-foreground h-6 flex items-center border-t"> {/* Added: border-t */}
           <Edit3 size={14} className="mr-2 animate-pulse" />
           {typingUsersText}
         </div>
@@ -86,3 +86,4 @@ export function MessageList() {
     </div>
   );
 }
+
