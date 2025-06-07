@@ -1,11 +1,12 @@
 
 'use server';
 /**
- * @fileOverview Simulates server-side authentication operations, using JSON files for persistence.
+ * @fileOverview Simulates server-side authentication and user status operations, using JSON files for persistence.
  * In a real application, these flows would interact with a secure authentication service and database.
  *
  * - registerUser - Simulates registering a new user.
  * - loginUser - Simulates logging in an existing user.
+ * - updateUserTypingStatus - Updates the typing status of a user.
  */
 
 import { ai } from '@/ai/genkit';
@@ -17,7 +18,7 @@ import path from 'path';
 // --- Schemas ---
 const AuthInputSchema = z.object({
   username: z.string(),
-  password: z.string().optional(), // Password is required for registration, optional for some login scenarios (e.g. guest, though not used by this flow)
+  password: z.string().optional(), 
 });
 export type AuthInput = z.infer<typeof AuthInputSchema>;
 
@@ -27,10 +28,23 @@ const AuthOutputSchema = z.object({
     id: z.string(),
     username: z.string(),
     isGuest: z.boolean().optional(),
+    isTypingInRoomId: z.string().nullable().optional(), // Added here for consistency, though not primary for auth output
   }).nullable(),
   message: z.string().optional(),
 });
 export type AuthOutput = z.infer<typeof AuthOutputSchema>;
+
+const UpdateTypingStatusInputSchema = z.object({
+  userId: z.string(),
+  roomId: z.string().nullable(),
+});
+export type UpdateTypingStatusInput = z.infer<typeof UpdateTypingStatusInputSchema>;
+
+const UpdateTypingStatusOutputSchema = z.object({
+  success: z.boolean(),
+});
+export type UpdateTypingStatusOutput = z.infer<typeof UpdateTypingStatusOutputSchema>;
+
 
 const DATA_DIR = path.join(process.cwd(), 'src', 'ai', 'data');
 const USERS_FILE_PATH = path.join(DATA_DIR, 'users.json');
@@ -94,11 +108,11 @@ const registerUserFlow = ai.defineFlow(
       username,
       password, // In a real app, HASH this password securely!
       isGuest: false,
+      isTypingInRoomId: null,
     };
     users.push(newUser);
     writeUsersToFile(users);
     
-    // Return only non-sensitive parts of the user object
     const { password: _p, ...userToReturn } = newUser;
     return { success: true, user: userToReturn, message: 'User registered successfully.' };
   }
@@ -121,13 +135,38 @@ const loginUserFlow = ai.defineFlow(
     const account = users.find(acc => acc.username === username);
 
     if (account) {
-      // In a real app, compare HASHED passwords securely!
       if (account.password === password || (!account.password && !password)) {
-        // Return only non-sensitive parts of the user object
         const { password: _p, ...userToReturn } = account;
         return { success: true, user: userToReturn, message: 'Login successful.' };
       }
     }
     return { success: false, user: null, message: 'Invalid username or password.' };
+  }
+);
+
+// --- Update User Typing Status ---
+export async function updateUserTypingStatus(input: UpdateTypingStatusInput): Promise<UpdateTypingStatusOutput> {
+  return updateUserTypingStatusFlow(input);
+}
+
+const updateUserTypingStatusFlow = ai.defineFlow(
+  {
+    name: 'updateUserTypingStatusFlow',
+    inputSchema: UpdateTypingStatusInputSchema,
+    outputSchema: UpdateTypingStatusOutputSchema,
+  },
+  async ({ userId, roomId }) => {
+    console.log(`Updating typing status for user "${userId}" in room "${roomId === null ? 'none' : roomId}"...`);
+    const users = readUsersFromFile();
+    const userIndex = users.findIndex(u => u.id === userId);
+
+    if (userIndex === -1) {
+      console.error(`User with ID ${userId} not found for typing status update.`);
+      return { success: false };
+    }
+
+    users[userIndex].isTypingInRoomId = roomId;
+    writeUsersToFile(users);
+    return { success: true };
   }
 );

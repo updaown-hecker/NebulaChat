@@ -7,6 +7,7 @@ import { useAuth } from './auth-context';
 import { suggestRoomOnboarding } from '@/ai/flows/suggest-room-onboarding';
 import { aiTutorialCommand } from '@/ai/flows/ai-tutorial-command';
 import { fetchChatData, syncRoomsToServer, syncMessagesToServer } from '@/ai/flows/chat-data-flow';
+import { updateUserTypingStatus } from '@/ai/flows/auth-flow'; // For typing status
 import useLocalStorage from '@/hooks/use-local-storage';
 import { 
   LOCAL_STORAGE_MESSAGES_KEY, 
@@ -19,10 +20,12 @@ interface ChatContextType {
   rooms: Room[];
   messages: Message[];
   currentRoom: Room | null;
-  onlineUsers: User[]; 
+  onlineUsers: User[];
+  typingUsers: User[]; // Users currently typing in the active room
   createRoom: (name: string, isPrivate: boolean) => Promise<Room | null>;
   joinRoom: (roomId: string) => void;
   sendMessage: (content: string) => Promise<void>;
+  setUserTyping: (isTyping: boolean) => void; // Method to report typing status
   isLoadingAiResponse: boolean;
   isLoadingInitialData: boolean;
   unreadRoomIds: Record<string, boolean>;
@@ -38,23 +41,22 @@ const DEFAULT_INITIAL_MESSAGES: Message[] = [
   { id: 'msg-fallback', roomId: 'general-fallback', userId: 'system', username: 'System', content: 'Welcome! Initializing chat...', timestamp: Date.now() },
 ];
 
-const MOCK_USERS_FOR_ROOM_PRESENCE: User[] = [
-    { id: 'user1', username: 'Alice' },
-    { id: 'user2', username: 'Bob' },
-    { id: 'guest1', username: 'Guest User', isGuest: true },
-];
-
 const POLLING_INTERVAL = 7000; // Fetch data every 7 seconds
+const TYPING_DEBOUNCE_TIME = 500; // ms to wait after last keystroke to send typing status
+const TYPING_TIMEOUT_DURATION = POLLING_INTERVAL - 1000; // How long a "typing" status lasts if not refreshed
 
 export const ChatProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
   const [rooms, setRooms] = useLocalStorage<Room[]>(LOCAL_STORAGE_ROOMS_KEY, []);
   const [messages, setMessages] = useLocalStorage<Message[]>(LOCAL_STORAGE_MESSAGES_KEY, []);
+  const [allUsers, setAllUsers] = useLocalStorage<User[]>('nebulaChatAllUsers', []); // Store all users locally as well
+  
   const [currentRoom, setCurrentRoom] = useState<Room | null>(null);
   const [lastActiveRoomId, setLastActiveRoomId] = useLocalStorage<string | null>(LOCAL_STORAGE_LAST_ACTIVE_ROOM_ID_KEY, null);
   const [unreadRoomIds, setUnreadRoomIds] = useLocalStorage<Record<string, boolean>>(LOCAL_STORAGE_UNREAD_ROOM_IDS_KEY, {});
   
   const [onlineUsers, setOnlineUsers] = useState<User[]>([]);
+  const [typingUsers, setTypingUsers] = useState<User[]>([]);
   const [isLoadingAiResponse, setIsLoadingAiResponse] = useState(false);
   const [isLoadingInitialData, setIsLoadingInitialData] = useState(true);
 
@@ -63,80 +65,86 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     currentRoomRef.current = currentRoom;
   }, [currentRoom]);
 
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastSentTypingStatusRef = useRef<boolean>(false);
+
   const fetchAndUpdateChatData = useCallback(async (isInitialLoad = false) => {
     if (!isInitialLoad) {
       // For polling, don't show main loading indicator
-      // console.log('Polling for chat data updates...');
     }
     try {
       const serverData = await fetchChatData();
       
-      if (serverData && serverData.rooms && serverData.messages) {
-        // Merge rooms
-        setRooms(prevLocalRooms => {
-          const localRoomIds = new Set(prevLocalRooms.map(r => r.id));
-          const newRoomsFromServer = serverData.rooms.filter(sr => !localRoomIds.has(sr.id));
-          const updatedRooms = [...prevLocalRooms, ...newRoomsFromServer];
-          if (newRoomsFromServer.length > 0 || prevLocalRooms.length !== serverData.rooms.length) {
-             syncRoomsToServer({ rooms: updatedRooms }).catch(error =>
-              console.error("Failed to sync merged rooms to server (simulation):", error)
-            ); // sync back if new rooms were added from server (less likely in current setup but good practice)
-            return updatedRooms;
-          }
-          return prevLocalRooms;
-        });
+      if (serverData) {
+        if (serverData.users) {
+          setAllUsers(serverData.users);
+        }
 
-        // Merge messages and update unread status
-        setMessages(prevLocalMessages => {
-          const localMessageIds = new Set(prevLocalMessages.map(m => m.id));
-          const newMessagesFromServer = serverData.messages.filter(sm => !localMessageIds.has(sm.id));
-          
-          if (newMessagesFromServer.length > 0) {
-            newMessagesFromServer.forEach(newMessage => {
-              if (newMessage.roomId !== currentRoomRef.current?.id && (!user || newMessage.userId !== user.id)) {
-                setUnreadRoomIds(prevUnread => ({ ...prevUnread, [newMessage.roomId]: true }));
-              }
-            });
-            const updatedMessages = [...prevLocalMessages, ...newMessagesFromServer].sort((a, b) => a.timestamp - b.timestamp);
-             syncMessagesToServer({ messages: updatedMessages }).catch(error =>
-              console.error("Failed to sync merged messages to server (simulation):", error)
-            );
-            return updatedMessages;
-          }
-          return prevLocalMessages;
-        });
+        if (serverData.rooms) {
+          setRooms(prevLocalRooms => {
+            const localRoomIds = new Set(prevLocalRooms.map(r => r.id));
+            const newRoomsFromServer = serverData.rooms.filter(sr => !localRoomIds.has(sr.id));
+            const updatedRooms = [...prevLocalRooms, ...newRoomsFromServer];
+            // Sync back only if there were changes from server or local was different.
+            // This simplified check might over-sync but is okay for prototype.
+            if (newRoomsFromServer.length > 0 || prevLocalRooms.length !== serverData.rooms.length) {
+                syncRoomsToServer({ rooms: updatedRooms }).catch(error =>
+                console.error("Failed to sync merged rooms to server (simulation):", error)
+              );
+              return updatedRooms;
+            }
+            return prevLocalRooms;
+          });
+        }
 
+        if (serverData.messages) {
+          setMessages(prevLocalMessages => {
+            const localMessageIds = new Set(prevLocalMessages.map(m => m.id));
+            const newMessagesFromServer = serverData.messages.filter(sm => !localMessageIds.has(sm.id));
+            
+            if (newMessagesFromServer.length > 0) {
+              newMessagesFromServer.forEach(newMessage => {
+                if (newMessage.roomId !== currentRoomRef.current?.id && (!user || newMessage.userId !== user.id)) {
+                  setUnreadRoomIds(prevUnread => ({ ...prevUnread, [newMessage.roomId]: true }));
+                }
+              });
+              const updatedMessages = [...prevLocalMessages, ...newMessagesFromServer].sort((a, b) => a.timestamp - b.timestamp);
+              syncMessagesToServer({ messages: updatedMessages }).catch(error =>
+                console.error("Failed to sync merged messages to server (simulation):", error)
+              );
+              return updatedMessages;
+            }
+            return prevLocalMessages;
+          });
+        }
+        
         if (isInitialLoad) {
-           // On initial load, if local storage was empty, it's now populated from server/defaults.
-           // Need to re-evaluate rooms based on the potentially updated setRooms call.
-           const currentRooms = window.localStorage.getItem(LOCAL_STORAGE_ROOMS_KEY);
-           const parsedCurrentRooms : Room[] = currentRooms ? JSON.parse(currentRooms) : serverData.rooms;
-
+           const currentRoomsList = serverData.rooms || rooms; // Use server rooms if available, else local
            if (lastActiveRoomId) {
-            const roomToRestore = parsedCurrentRooms.find(r => r.id === lastActiveRoomId);
+            const roomToRestore = currentRoomsList.find(r => r.id === lastActiveRoomId);
             if (roomToRestore) {
               if (!currentRoomRef.current || currentRoomRef.current.id !== roomToRestore.id) {
-                 setCurrentRoom(roomToRestore); // Directly set, joinRoom might cause loops here
+                 setCurrentRoom(roomToRestore); 
                  setUnreadRoomIds(prevUnread => ({ ...prevUnread, [roomToRestore.id]: false }));
               }
             } else {
               setLastActiveRoomId(null); 
-              if (parsedCurrentRooms.length > 0 && !currentRoomRef.current) {
-                setCurrentRoom(parsedCurrentRooms[0]);
-                setLastActiveRoomId(parsedCurrentRooms[0].id);
-                setUnreadRoomIds(prevUnread => ({ ...prevUnread, [parsedCurrentRooms[0].id]: false }));
+              if (currentRoomsList.length > 0 && !currentRoomRef.current) {
+                setCurrentRoom(currentRoomsList[0]);
+                setLastActiveRoomId(currentRoomsList[0].id);
+                setUnreadRoomIds(prevUnread => ({ ...prevUnread, [currentRoomsList[0].id]: false }));
               }
             }
-          } else if (parsedCurrentRooms.length > 0 && !currentRoomRef.current) {
-             setCurrentRoom(parsedCurrentRooms[0]);
-             setLastActiveRoomId(parsedCurrentRooms[0].id);
-             setUnreadRoomIds(prevUnread => ({ ...prevUnread, [parsedCurrentRooms[0].id]: false }));
+          } else if (currentRoomsList.length > 0 && !currentRoomRef.current) {
+             setCurrentRoom(currentRoomsList[0]);
+             setLastActiveRoomId(currentRoomsList[0].id);
+             setUnreadRoomIds(prevUnread => ({ ...prevUnread, [currentRoomsList[0].id]: false }));
           }
         }
       } else if (isInitialLoad) {
-        // Fallback if server data is empty on initial load
         if (rooms.length === 0) setRooms(DEFAULT_INITIAL_ROOMS);
         if (messages.length === 0) setMessages(DEFAULT_INITIAL_MESSAGES);
+        // No default users for allUsers, it will be empty until fetched
       }
     } catch (error) {
       console.error("Failed to fetch/update chat data from server (simulation):", error);
@@ -150,37 +158,36 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [setRooms, setMessages, setUnreadRoomIds, user?.id, rooms.length, messages.length, lastActiveRoomId, setLastActiveRoomId]); 
-  // rooms.length and messages.length as proxy for initial load state for default data
-
-  // Initial data load
+  }, [setRooms, setMessages, setAllUsers, setUnreadRoomIds, user?.id, lastActiveRoomId, setLastActiveRoomId]); 
+  
   useEffect(() => {
     fetchAndUpdateChatData(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Run only once on mount
+  }, []); 
 
-  // Polling mechanism
   useEffect(() => {
-    if (isLoadingInitialData) return; // Don't start polling until initial load is done
-
+    if (isLoadingInitialData) return; 
     const intervalId = setInterval(() => {
       fetchAndUpdateChatData(false);
     }, POLLING_INTERVAL);
-
-    return () => clearInterval(intervalId); // Cleanup on unmount
+    return () => clearInterval(intervalId);
   }, [isLoadingInitialData, fetchAndUpdateChatData]);
   
   useEffect(() => {
-    if (currentRoom) {
-      const usersInRoom = MOCK_USERS_FOR_ROOM_PRESENCE.filter(u => currentRoom.members.includes(u.id));
-      if (user && currentRoom.members.includes(user.id) && !usersInRoom.find(onlineUser => onlineUser.id === user.id)) {
-        usersInRoom.push(user);
-      }
+    if (currentRoom && allUsers.length > 0) {
+      const usersInRoom = allUsers.filter(u => currentRoom.members.includes(u.id) || u.id === user?.id); // Include self if member
       setOnlineUsers(usersInRoom);
+
+      const currentTypingUsers = allUsers.filter(
+        u => u.id !== user?.id && u.isTypingInRoomId === currentRoom.id
+      );
+      setTypingUsers(currentTypingUsers);
+
     } else {
       setOnlineUsers([]);
+      setTypingUsers([]);
     }
-  }, [currentRoom, user, rooms]); // rooms dependency in case members list changes from polling
+  }, [currentRoom, allUsers, user?.id]);
   
   const addMessage = useCallback((message: Message) => {
     setMessages(prevMessages => {
@@ -191,52 +198,46 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         return updatedMessages;
     });
 
-    if (message.roomId !== currentRoomRef.current?.id && (!user || message.userId !== user.id)) { // Don't mark self messages as unread
+    if (message.roomId !== currentRoomRef.current?.id && (!user || message.userId !== user.id)) { 
         setUnreadRoomIds(prevUnread => ({ ...prevUnread, [message.roomId]: true }));
     }
   }, [setMessages, setUnreadRoomIds, user]);
 
 
   const joinRoom = useCallback((roomId: string) => {
-    // Use a functional update for setRooms to ensure we are working with the latest state
-    setRooms(currentRooms => {
-        const roomToJoin = currentRooms.find(r => r.id === roomId);
+    setRooms(currentLocalRooms => { // Use functional update for setRooms
+        const roomToJoin = currentLocalRooms.find(r => r.id === roomId);
         if (roomToJoin) {
             setCurrentRoom(roomToJoin);
             setLastActiveRoomId(roomToJoin.id);
             setUnreadRoomIds(prevUnread => ({ ...prevUnread, [roomId]: false }));
 
-            let updatedRooms = currentRooms;
+            let updatedLocalRooms = currentLocalRooms;
             if (user && !roomToJoin.isPrivate && !roomToJoin.members.includes(user.id)) {
-                updatedRooms = currentRooms.map(r => 
+                updatedLocalRooms = currentLocalRooms.map(r => 
                     r.id === roomId ? { ...r, members: [...r.members, user.id] } : r
                 );
-                syncRoomsToServer({ rooms: updatedRooms }).catch(error => 
+                // This syncs all rooms. Could be optimized to sync only the changed room if backend supported it.
+                syncRoomsToServer({ rooms: updatedLocalRooms }).catch(error => 
                     console.error("Failed to sync room membership update to server (simulation):", error)
                 );
             }
-            return updatedRooms; // Return the potentially updated rooms array
+            return updatedLocalRooms; 
         }
-        return currentRooms; // Return current rooms if no change
+        return currentLocalRooms; 
     });
 }, [user, setRooms, setCurrentRoom, setLastActiveRoomId, setUnreadRoomIds]);
 
-
-  // Effect to restore last active room or join the first one AFTER initial data load
   useEffect(() => {
     if (isLoadingInitialData || rooms.length === 0) return;
-
     const targetRoomId = lastActiveRoomId || (rooms.length > 0 ? rooms[0].id : null);
-    
     if (targetRoomId) {
-        const roomToJoin = rooms.find(r => r.id === targetRoomId);
-        if (roomToJoin) {
-            if (!currentRoom || currentRoom.id !== roomToJoin.id) {
-                // joinRoom will handle setCurrentRoom, setLastActiveRoomId, and clear unread
-                joinRoom(roomToJoin.id);
+        const roomToJoinDetails = rooms.find(r => r.id === targetRoomId);
+        if (roomToJoinDetails) {
+            if (!currentRoom || currentRoom.id !== roomToJoinDetails.id) {
+                joinRoom(roomToJoinDetails.id);
             }
         } else if (lastActiveRoomId) { 
-            // lastActiveRoomId was invalid (e.g. room deleted), clear it and try first room
             setLastActiveRoomId(null);
             if (rooms.length > 0 && (!currentRoom || !rooms.find(r => r.id === currentRoom.id))) {
               joinRoom(rooms[0].id);
@@ -245,24 +246,23 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [isLoadingInitialData, rooms, lastActiveRoomId, currentRoom, joinRoom, setLastActiveRoomId]);
 
-
   const createRoom = useCallback(async (name: string, isPrivate: boolean): Promise<Room | null> => {
     if (!user) return null;
     const newRoom: Room = {
-      id: `room-${Date.now()}-${Math.random().toString(36).substring(2,7)}`, // added random suffix for better uniqueness
+      id: `room-${Date.now()}-${Math.random().toString(36).substring(2,7)}`,
       name,
       isPrivate,
       members: [user.id], 
       ownerId: user.id,
     };
     setRooms(prevRooms => {
-        const updatedRooms = [...prevRooms, newRoom];
-        syncRoomsToServer({ rooms: updatedRooms }).catch(error => 
+        const updatedRoomsList = [...prevRooms, newRoom];
+        syncRoomsToServer({ rooms: updatedRoomsList }).catch(error => 
           console.error("Failed to sync rooms with server (simulation):", error)
         );
-        return updatedRooms;
+        return updatedRoomsList;
     });
-    joinRoom(newRoom.id); // Automatically join the new room
+    joinRoom(newRoom.id);
     return newRoom;
   }, [user, setRooms, joinRoom]);
 
@@ -296,7 +296,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (error) {
       console.error("AI command error:", error);
-      const errorMessage: Message = {
+      addMessage({
         id: `err-msg-${Date.now()}`,
         roomId: currentRoomRef.current.id,
         userId: 'ai-assistant',
@@ -304,15 +304,42 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         content: "Sorry, I encountered an error trying to process your command.",
         timestamp: Date.now(),
         isAIMessage: true,
-      };
-      addMessage(errorMessage);
+      });
     } finally {
       setIsLoadingAiResponse(false);
     }
-  }, [user, messages, addMessage]); // messages needed for /suggest-room
+  }, [user, messages, addMessage]);
+
+  const setUserTyping = useCallback((isTyping: boolean) => {
+    if (!user || !currentRoomRef.current) return;
+
+    const targetRoomId = isTyping ? currentRoomRef.current.id : null;
+
+    // Prevent sending too many updates
+    if (isTyping && lastSentTypingStatusRef.current && targetRoomId === user.isTypingInRoomId) return; // Already sent "typing" for this room
+    if (!isTyping && !lastSentTypingStatusRef.current && user.isTypingInRoomId === null) return; // Already sent "not typing"
+
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    typingTimeoutRef.current = setTimeout(async () => {
+      try {
+        await updateUserTypingStatus({ userId: user.id, roomId: targetRoomId });
+        // Optimistically update local user state as well
+        setAllUsers(prev => prev.map(u => u.id === user.id ? {...u, isTypingInRoomId: targetRoomId} : u));
+        lastSentTypingStatusRef.current = isTyping;
+      } catch (error) {
+        console.error("Failed to update typing status:", error);
+      }
+    }, TYPING_DEBOUNCE_TIME);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, setAllUsers]); // Removed currentRoomRef from deps to avoid re-creating function too often
+
 
   const sendMessage = useCallback(async (content: string) => {
     if (!user || !currentRoomRef.current) return;
+    setUserTyping(false); // Stop typing when message is sent
 
     const commandMatch = content.match(/^\/(\w+)\s*(.*)/);
     if (commandMatch) {
@@ -320,7 +347,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       await handleAiCommand(command, arg.trim());
     } else {
       const newMessage: Message = {
-        id: `msg-${Date.now()}-${Math.random().toString(36).substring(2,7)}`, // added random suffix for better uniqueness
+        id: `msg-${Date.now()}-${Math.random().toString(36).substring(2,7)}`,
         roomId: currentRoomRef.current.id,
         userId: user.id,
         username: user.username,
@@ -329,7 +356,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       };
       addMessage(newMessage);
     }
-  }, [user, addMessage, handleAiCommand]);
+  }, [user, addMessage, handleAiCommand, setUserTyping]);
 
 
   return (
@@ -338,9 +365,11 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       messages, 
       currentRoom, 
       onlineUsers, 
+      typingUsers,
       createRoom, 
       joinRoom, 
       sendMessage, 
+      setUserTyping,
       isLoadingAiResponse, 
       isLoadingInitialData,
       unreadRoomIds
@@ -357,6 +386,3 @@ export const useChat = (): ChatContextType => {
   }
   return context;
 };
-
-
-    

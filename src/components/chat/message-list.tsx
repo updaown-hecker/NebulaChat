@@ -6,11 +6,11 @@ import { useChat } from '@/contexts/chat-context';
 import { MessageItem } from './message-item';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Bot, Loader2, MessageCircle, ServerCrash } from 'lucide-react'; // Added Loader2 and ServerCrash
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'; // Added Avatar components
+import { Bot, Loader2, MessageCircle, ServerCrash, Edit3 } from 'lucide-react'; 
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'; 
 
 export function MessageList() {
-  const { messages, currentRoom, isLoadingAiResponse, isLoadingInitialData } = useChat();
+  const { messages, currentRoom, isLoadingAiResponse, isLoadingInitialData, typingUsers } = useChat();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
 
@@ -19,7 +19,7 @@ export function MessageList() {
     if (viewportRef.current) {
       viewportRef.current.scrollTop = viewportRef.current.scrollHeight;
     }
-  }, [messages, isLoadingAiResponse]);
+  }, [messages, isLoadingAiResponse, typingUsers]); // Add typingUsers to trigger scroll
 
   if (isLoadingInitialData) {
     return (
@@ -32,10 +32,6 @@ export function MessageList() {
   }
 
   if (!currentRoom) {
-    // Check if rooms exist to suggest creating one if none are available.
-    // This requires access to `rooms` from useChat, if not already available, might need adjustment.
-    // Assuming rooms are available if not isLoadingInitialData and no currentRoom.
-    // For now, keeping the message simple.
     return (
       <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-8">
         <MessageCircle className="w-16 h-16 mb-4 opacity-50" />
@@ -47,9 +43,7 @@ export function MessageList() {
   
   const filteredMessages = messages.filter(msg => msg.roomId === currentRoom?.id);
 
-  // Handle case where messages for the current room might still be loading or failed to load
-  // This is a simplified check. A more robust solution might involve specific error states.
-  if (!messages && !isLoadingInitialData) { // Assuming messages would be non-null after initial load
+  if (!messages && !isLoadingInitialData) { 
      return (
       <div className="flex flex-col items-center justify-center h-full text-destructive p-8">
         <ServerCrash className="w-16 h-16 mb-4 opacity-50" />
@@ -59,24 +53,36 @@ export function MessageList() {
     );
   }
 
+  const typingUsersText = typingUsers.length > 0 
+    ? `${typingUsers.map(u => u.username).join(', ')} ${typingUsers.length === 1 ? 'is' : 'are'} typing...`
+    : null;
+
   return (
-    <ScrollArea className="h-full flex-1 p-4" ref={scrollAreaRef} viewportRef={viewportRef}>
-      <div className="space-y-4">
-        {filteredMessages.map(message => (
-          <MessageItem key={message.id} message={message} />
-        ))}
-        {isLoadingAiResponse && (
-          <div className="flex items-start gap-3 p-3 rounded-lg">
-            <Avatar className="h-8 w-8 border">
-              <AvatarFallback className="text-xs bg-primary text-primary-foreground"><Bot size={16}/></AvatarFallback>
-            </Avatar>
-            <div className="max-w-[70%] p-3 rounded-xl shadow-sm bg-accent/20 text-foreground rounded-bl-none">
-              <p className="text-xs font-semibold mb-1 opacity-80">NebulaAI</p>
-              <Skeleton className="h-4 w-24" />
+    <div className="flex flex-col h-full">
+      <ScrollArea className="flex-1 p-4" ref={scrollAreaRef} viewportRef={viewportRef}>
+        <div className="space-y-4">
+          {filteredMessages.map(message => (
+            <MessageItem key={message.id} message={message} />
+          ))}
+          {isLoadingAiResponse && (
+            <div className="flex items-start gap-3 p-3 rounded-lg">
+              <Avatar className="h-8 w-8 border">
+                <AvatarFallback className="text-xs bg-primary text-primary-foreground"><Bot size={16}/></AvatarFallback>
+              </Avatar>
+              <div className="max-w-[70%] p-3 rounded-xl shadow-sm bg-accent/20 text-foreground rounded-bl-none">
+                <p className="text-xs font-semibold mb-1 opacity-80">NebulaAI</p>
+                <Skeleton className="h-4 w-24" />
+              </div>
             </div>
-          </div>
-        )}
-      </div>
-    </ScrollArea>
+          )}
+        </div>
+      </ScrollArea>
+      {typingUsersText && (
+        <div className="p-2 px-4 text-xs text-muted-foreground h-6 flex items-center">
+          <Edit3 size={14} className="mr-2 animate-pulse" />
+          {typingUsersText}
+        </div>
+      )}
+    </div>
   );
 }

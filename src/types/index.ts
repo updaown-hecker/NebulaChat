@@ -1,9 +1,11 @@
+
 export interface User {
   id: string;
   username: string;
   avatar?: string; // URL to avatar image
   isGuest?: boolean;
   password?: string; // For local "account" simulation
+  isTypingInRoomId?: string | null; // ID of the room the user is currently typing in
 }
 
 export interface Room {

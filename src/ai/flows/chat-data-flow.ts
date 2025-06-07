@@ -2,20 +2,29 @@
 'use server';
 /**
  * @fileOverview Simulates server-side operations for fetching and syncing chat data, using JSON files for persistence.
- * In a real application, these flows would interact with a database.
+ * Also fetches user data.
  *
- * - fetchChatDataFlow - Fetches initial rooms and messages from JSON files.
+ * - fetchChatDataFlow - Fetches initial rooms, messages, and users from JSON files.
  * - syncRoomsToServerFlow - Saves rooms to a JSON file.
  * - syncMessagesToServerFlow - Saves messages to a JSON file.
  */
 
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
-import type { Room, Message } from '@/types';
+import {z}from 'genkit';
+import type { Room, Message, User } from '@/types'; // Import User type
 import fs from 'fs';
 import path from 'path';
 
-// Define Zod schemas for Room and Message
+// Define Zod schemas
+const UserSchema = z.object({
+  id: z.string(),
+  username: z.string(),
+  avatar: z.string().optional(),
+  isGuest: z.boolean().optional(),
+  password: z.string().optional(), // Keep for reading, but don't expose sensitive data
+  isTypingInRoomId: z.string().nullable().optional(),
+});
+
 const RoomSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -35,6 +44,11 @@ const MessageSchema = z.object({
 });
 
 // Initial default data if JSON files don't exist
+const DEFAULT_MOCK_USERS_SERVER: User[] = [
+    { id: 'user1', username: 'Alice', isTypingInRoomId: null },
+    { id: 'user2', username: 'Bob', isTypingInRoomId: null },
+];
+
 const DEFAULT_MOCK_ROOMS_SERVER: Room[] = [
   { id: 'general', name: 'General', isPrivate: false, members: ['user1', 'user2', 'guest1'], ownerId: 'user1' },
   { id: 'random', name: 'Random', isPrivate: false, members: ['user1', 'guest1'], ownerId: 'user1' },
@@ -45,6 +59,7 @@ const DEFAULT_MOCK_MESSAGES_SERVER: Message[] = [
 ];
 
 const DATA_DIR = path.join(process.cwd(), 'src', 'ai', 'data');
+const USERS_FILE_PATH = path.join(DATA_DIR, 'users.json');
 const ROOMS_FILE_PATH = path.join(DATA_DIR, 'rooms.json');
 const MESSAGES_FILE_PATH = path.join(DATA_DIR, 'messages.json');
 
@@ -59,7 +74,6 @@ const ensureDataDirExists = () => {
 const readDataFromFile = <T>(filePath: string, defaultData: T): T => {
   ensureDataDirExists();
   if (!fs.existsSync(filePath)) {
-    // Write default data to the file if it doesn't exist
     writeDataToFile(filePath, defaultData);
     return defaultData;
   }
@@ -68,7 +82,6 @@ const readDataFromFile = <T>(filePath: string, defaultData: T): T => {
     return JSON.parse(fileContent) as T;
   } catch (error) {
     console.error(`Error reading file ${filePath}:`, error);
-    // Write default data if file is corrupt or unparsable
     writeDataToFile(filePath, defaultData);
     return defaultData;
   }
@@ -88,6 +101,7 @@ const writeDataToFile = <T>(filePath: string, data: T): void => {
 const FetchChatDataOutputSchema = z.object({
   rooms: z.array(RoomSchema),
   messages: z.array(MessageSchema),
+  users: z.array(UserSchema.omit({ password: true })), // Omit password when sending to client
 });
 export type FetchChatDataOutput = z.infer<typeof FetchChatDataOutputSchema>;
 
@@ -101,12 +115,18 @@ const fetchChatDataFlow = ai.defineFlow(
     outputSchema: FetchChatDataOutputSchema,
   },
   async () => {
-    console.log('Fetching initial chat data from JSON files...');
+    console.log('Fetching initial chat data (rooms, messages, users) from JSON files...');
     const rooms = readDataFromFile<Room[]>(ROOMS_FILE_PATH, DEFAULT_MOCK_ROOMS_SERVER);
     const messages = readDataFromFile<Message[]>(MESSAGES_FILE_PATH, DEFAULT_MOCK_MESSAGES_SERVER);
+    const allUsersFull = readDataFromFile<User[]>(USERS_FILE_PATH, DEFAULT_MOCK_USERS_SERVER);
+    
+    // Omit password before sending to client
+    const users = allUsersFull.map(({ password, ...userWithoutPassword }) => userWithoutPassword);
+
     return {
       rooms,
       messages,
+      users,
     };
   }
 );

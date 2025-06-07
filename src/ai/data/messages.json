@@ -1,0 +1,138 @@
+[
+  {
+    "id": "msg3",
+    "roomId": "random",
+    "userId": "guest1",
+    "username": "Guest User",
+    "content": "Anyone here?",
+    "timestamp": 1749334928421
+  },
+  {
+    "id": "msg-1749335238237",
+    "roomId": "general",
+    "userId": "user-1749334881349",
+    "username": "updaown",
+    "content": "Hii",
+    "timestamp": 1749335238237
+  },
+  {
+    "id": "msg-1749335247221",
+    "roomId": "random",
+    "userId": "user-1749334881349",
+    "username": "updaown",
+    "content": "No",
+    "timestamp": 1749335247221
+  },
+  {
+    "id": "msg-1749335438134",
+    "roomId": "general",
+    "userId": "user-1749334881349",
+    "username": "updaown",
+    "content": "Hi",
+    "timestamp": 1749335438134
+  },
+  {
+    "id": "msg-1749335441215",
+    "roomId": "general",
+    "userId": "user-1749334881349",
+    "username": "updaown",
+    "content": "Hi",
+    "timestamp": 1749335441215
+  },
+  {
+    "id": "msg-1749335446039",
+    "roomId": "general",
+    "userId": "user-1749334881349",
+    "username": "updaown",
+    "content": "Hi",
+    "timestamp": 1749335446039
+  },
+  {
+    "id": "msg-1749335482823",
+    "roomId": "general",
+    "userId": "user-1749335479892",
+    "username": "updaown1",
+    "content": "Hiii",
+    "timestamp": 1749335482823
+  },
+  {
+    "id": "msg-1749335602799",
+    "roomId": "general",
+    "userId": "user-1749334881349",
+    "username": "updaown",
+    "content": "No way there's more people here",
+    "timestamp": 1749335602799
+  },
+  {
+    "id": "msg-1749336092745",
+    "roomId": "general",
+    "userId": "user-1749334881349",
+    "username": "updaown",
+    "content": "😀",
+    "timestamp": 1749336092745
+  },
+  {
+    "id": "msg1",
+    "roomId": "general",
+    "userId": "user1",
+    "username": "Alice",
+    "content": "Hello from server!",
+    "timestamp": 1749336217534
+  },
+  {
+    "id": "msg2",
+    "roomId": "general",
+    "userId": "user2",
+    "username": "Bob",
+    "content": "Hi Alice (server)!",
+    "timestamp": 1749336227534
+  },
+  {
+    "id": "msg-1749336413708",
+    "roomId": "general",
+    "userId": "user-1749336395407",
+    "username": "updaown",
+    "content": "Hi",
+    "timestamp": 1749336413708
+  },
+  {
+    "id": "msg-1749336792054-c52nz",
+    "roomId": "random",
+    "userId": "user-1749336395407",
+    "username": "updaown",
+    "content": "Hi",
+    "timestamp": 1749336792054
+  },
+  {
+    "id": "msg-1749336813705-tirbb",
+    "roomId": "general",
+    "userId": "user-1749336395407",
+    "username": "updaown",
+    "content": "Hiii",
+    "timestamp": 1749336813705
+  },
+  {
+    "id": "msg-1749336818446-sx258",
+    "roomId": "general",
+    "userId": "user-1749336395407",
+    "username": "updaown",
+    "content": "🤔",
+    "timestamp": 1749336818446
+  },
+  {
+    "id": "msg-1749336829650-ts0zd",
+    "roomId": "general",
+    "userId": "user-1749334881349",
+    "username": "updaown",
+    "content": "Lol",
+    "timestamp": 1749336829650
+  },
+  {
+    "id": "msg-1749336848682-fgu9p",
+    "roomId": "general",
+    "userId": "user-1749334881349",
+    "username": "updaown",
+    "content": "Hi",
+    "timestamp": 1749336848683
+  }
+]

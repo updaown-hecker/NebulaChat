@@ -1,3 +1,4 @@
+
 "use client";
 
 import React from 'react';
@@ -5,10 +6,11 @@ import { useChat } from '@/contexts/chat-context';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Users, Info } from 'lucide-react';
+import { Users, Info, Edit3 } from 'lucide-react'; // Added Edit3 for typing indicator
+import type { User } from '@/types'; // Import User type for clarity
 
 export function RightSidebar() {
-  const { currentRoom, onlineUsers } = useChat();
+  const { currentRoom, onlineUsers, typingUsers } = useChat(); // Added typingUsers
 
   if (!currentRoom) {
     return (
@@ -28,6 +30,13 @@ export function RightSidebar() {
       .substring(0, 2);
   };
 
+  // Filter onlineUsers to only those who are members of the currentRoom
+  // This assumes onlineUsers from context might contain users not in the current room's member list.
+  // However, ChatContext's onlineUsers logic is already attempting to derive based on currentRoom members + allUsers.
+  // So, this explicit filter might be redundant if ChatContext is perfect, but good for safety.
+  const usersInCurrentRoom = onlineUsers.filter(ou => currentRoom.members.includes(ou.id));
+
+
   return (
     <ScrollArea className="h-full">
       <div className="p-4 space-y-6">
@@ -46,20 +55,23 @@ export function RightSidebar() {
         <div>
           <h3 className="text-md font-semibold mb-3 flex items-center gap-2">
             <Users className="h-5 w-5 text-primary" />
-            Online Users ({onlineUsers.length})
+            Online Users ({usersInCurrentRoom.length})
           </h3>
-          {onlineUsers.length > 0 ? (
+          {usersInCurrentRoom.length > 0 ? (
             <ul className="space-y-2">
-              {onlineUsers.map(user => (
+              {usersInCurrentRoom.map((user: User) => ( // Explicitly type user
                 <li key={user.id} className="flex items-center gap-2 p-1.5 rounded-md hover:bg-muted transition-colors">
                   <Avatar className="h-7 w-7 text-xs">
-                    {/* <AvatarImage src={user.avatar} /> */}
+                    {user.avatar && <AvatarImage src={user.avatar} alt={user.username} />}
                     <AvatarFallback className="bg-secondary text-secondary-foreground">
                       {getInitials(user.username)}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="text-sm truncate">{user.username}</span>
-                  {user.isGuest && <Badge variant="outline" className="text-xs">Guest</Badge>}
+                  <span className="text-sm truncate flex-1">{user.username}</span>
+                  {typingUsers.find(tu => tu.id === user.id) && (
+                    <Edit3 size={14} className="text-primary animate-pulse" title={`${user.username} is typing...`} />
+                  )}
+                  {user.isGuest && <Badge variant="outline" className="text-xs ml-auto">Guest</Badge>}
                 </li>
               ))}
             </ul>

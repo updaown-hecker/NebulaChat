@@ -1,0 +1,35 @@
+[
+  {
+    "id": "general",
+    "name": "General",
+    "isPrivate": false,
+    "members": [
+      "user1",
+      "user2",
+      "guest1",
+      "user-1749336395407"
+    ],
+    "ownerId": "user1"
+  },
+  {
+    "id": "random",
+    "name": "Random",
+    "isPrivate": false,
+    "members": [
+      "user1",
+      "guest1",
+      "user-1749336395407"
+    ],
+    "ownerId": "user1"
+  },
+  {
+    "id": "dev-talk",
+    "name": "Dev Talk",
+    "isPrivate": false,
+    "members": [
+      "user2",
+      "user-1749336395407"
+    ],
+    "ownerId": "user2"
+  }
+]
