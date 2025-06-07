@@ -1,3 +1,29 @@
+/**
+ * @license SPDX-License-Identifier: Apache-2.0
+ */
+/**
+ * @fileoverview A highly customizable and responsive sidebar component for React applications.
+ *
+ * It provides context for managing sidebar state, including open/close status, mobile
+ * responsiveness, and keyboard shortcuts. The component supports various visual styles
+ * such as "sidebar", "floating", and "inset", and can be configured to be collapsible
+ * in different ways ("offcanvas", "icon", "none").
+ *
+ * The sidebar is composed of several sub-components:
+ * - `SidebarProvider`: Root provider for sidebar context.
+ * - `Sidebar`: Main sidebar container, handles mobile sheet and desktop display.
+ * - `SidebarTrigger`: Button to toggle the sidebar.
+ * - `SidebarRail`: Draggable rail to resize or toggle the sidebar.
+ * - `SidebarInset`: Main content area that adjusts based on sidebar state.
+ * - `SidebarHeader`, `SidebarContent`, `SidebarFooter`: Structural components for sidebar layout.
+ * - `SidebarInput`, `SidebarSeparator`: Utility components for use within the sidebar.
+ * - `SidebarGroup`, `SidebarGroupLabel`, `SidebarGroupAction`, `SidebarGroupContent`: Components for grouping items.
+ * - `SidebarMenu`, `SidebarMenuItem`, `SidebarMenuButton`, `SidebarMenuAction`, `SidebarMenuBadge`, `SidebarMenuSkeleton`: Components for creating navigation menus.
+ * - `SidebarMenuSub`, `SidebarMenuSubItem`, `SidebarMenuSubButton`: Components for creating sub-menus.
+ *
+ * The sidebar state (expanded/collapsed) is persisted using a cookie.
+ * It also includes a keyboard shortcut (Cmd/Ctrl + B) to toggle the sidebar.
+ */
 "use client"
 
 import * as React from "react"
@@ -10,7 +36,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
-import { Sheet, SheetContent } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   Tooltip,
@@ -198,7 +224,10 @@ const Sidebar = React.forwardRef<
           <SheetContent
             data-sidebar="sidebar"
             data-mobile="true"
-            className="w-[--sidebar-width] bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden"
+            className={cn(
+                "w-[--sidebar-width] bg-sidebar text-sidebar-foreground [&>button]:hidden",
+                "p-0" 
+            )}
             style={
               {
                 "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
@@ -206,6 +235,9 @@ const Sidebar = React.forwardRef<
             }
             side={side}
           >
+            <SheetHeader className="sr-only">
+                <SheetTitle>{side === 'left' ? 'Main Navigation' : 'Options Menu'}</SheetTitle>
+            </SheetHeader>
             <div className="flex h-full w-full flex-col">{children}</div>
           </SheetContent>
         </Sheet>
