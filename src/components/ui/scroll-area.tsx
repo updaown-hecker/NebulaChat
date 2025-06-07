@@ -1,20 +1,32 @@
+
 "use client"
 
 import * as React from "react"
+import *import type { ForwardedRef } from 'react';
 import * as ScrollAreaPrimitive from "@radix-ui/react-scroll-area"
 
 import { cn } from "@/lib/utils"
 
+// Define custom props for ScrollArea to include viewportRef
+interface ScrollAreaProps extends React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root> {
+  children: React.ReactNode;
+  className?: string;
+  viewportRef?: ForwardedRef<HTMLDivElement>; // Use ForwardedRef or RefObject
+}
+
 const ScrollArea = React.forwardRef<
   React.ElementRef<typeof ScrollAreaPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root>
->(({ className, children, ...props }, ref) => (
+  ScrollAreaProps
+>(({ className, children, viewportRef, ...props }, ref) => (
   <ScrollAreaPrimitive.Root
-    ref={ref}
+    ref={ref} // This ref is for the ScrollAreaPrimitive.Root element itself
     className={cn("relative overflow-hidden", className)}
-    {...props}
+    {...props} // viewportRef is no longer spread here
   >
-    <ScrollAreaPrimitive.Viewport className="h-full w-full rounded-[inherit]">
+    <ScrollAreaPrimitive.Viewport
+      className="h-full w-full rounded-[inherit]"
+      ref={viewportRef} // Pass the viewportRef to the Viewport component's ref prop
+    >
       {children}
     </ScrollAreaPrimitive.Viewport>
     <ScrollBar />
