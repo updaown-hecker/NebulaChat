@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { Room, Message, User } from '@/types';
@@ -5,6 +6,7 @@ import React, { createContext, useContext, useState, ReactNode, useCallback, use
 import { useAuth } from './auth-context';
 import { suggestRoomOnboarding } from '@/ai/flows/suggest-room-onboarding';
 import { aiTutorialCommand } from '@/ai/flows/ai-tutorial-command';
+import { fetchChatData, syncRoomsToServer, syncMessagesToServer } from '@/ai/flows/chat-data-flow';
 import useLocalStorage from '@/hooks/use-local-storage';
 import { LOCAL_STORAGE_MESSAGES_KEY, LOCAL_STORAGE_ROOMS_KEY } from '@/lib/constants';
 
@@ -17,59 +19,83 @@ interface ChatContextType {
   joinRoom: (roomId: string) => void;
   sendMessage: (content: string) => Promise<void>;
   isLoadingAiResponse: boolean;
+  isLoadingInitialData: boolean;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
-// Mock data - used as initial values if localStorage is empty
-const INITIAL_MOCK_ROOMS: Room[] = [
-  { id: 'general', name: 'General', isPrivate: false, members: ['user1', 'user2', 'guest1'], ownerId: 'user1' },
-  { id: 'random', name: 'Random', isPrivate: false, members: ['user1', 'guest1'], ownerId: 'user1' },
-  { id: 'dev-talk', name: 'Dev Talk', isPrivate: false, members: ['user2'], ownerId: 'user2' },
+// Default initial values if localStorage is empty AND server fetch fails
+const DEFAULT_INITIAL_ROOMS: Room[] = [
+  { id: 'general-fallback', name: 'General (Fallback)', isPrivate: false, members: [], ownerId: 'system' },
 ];
 
-const INITIAL_MOCK_MESSAGES: Message[] = [
-  { id: 'msg1', roomId: 'general', userId: 'user1', username: 'Alice', content: 'Hello everyone!', timestamp: Date.now() - 100000 },
-  { id: 'msg2', roomId: 'general', userId: 'user2', username: 'Bob', content: 'Hi Alice!', timestamp: Date.now() - 90000 },
-  { id: 'msg3', roomId: 'random', userId: 'guest1', username: 'Guest User', content: 'Anyone here?', timestamp: Date.now() - 80000 },
+const DEFAULT_INITIAL_MESSAGES: Message[] = [
+  { id: 'msg-fallback', roomId: 'general-fallback', userId: 'system', username: 'System', content: 'Welcome! Chats are stored locally.', timestamp: Date.now() },
 ];
 
-// This list is for populating onlineUsers, not for auth.
 const MOCK_USERS_FOR_ROOM_PRESENCE: User[] = [
     { id: 'user1', username: 'Alice' },
     { id: 'user2', username: 'Bob' },
     { id: 'guest1', username: 'Guest User', isGuest: true },
-    // Add any other users who might appear in rooms here
 ];
 
 
 export const ChatProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
-  const [rooms, setRooms] = useLocalStorage<Room[]>(LOCAL_STORAGE_ROOMS_KEY, INITIAL_MOCK_ROOMS);
-  const [messages, setMessages] = useLocalStorage<Message[]>(LOCAL_STORAGE_MESSAGES_KEY, INITIAL_MOCK_MESSAGES);
+  // useLocalStorage will initialize from localStorage if available, otherwise from its second arg.
+  const [rooms, setRooms] = useLocalStorage<Room[]>(LOCAL_STORAGE_ROOMS_KEY, []);
+  const [messages, setMessages] = useLocalStorage<Message[]>(LOCAL_STORAGE_MESSAGES_KEY, []);
   const [currentRoom, setCurrentRoom] = useState<Room | null>(null);
   const [onlineUsers, setOnlineUsers] = useState<User[]>([]);
   const [isLoadingAiResponse, setIsLoadingAiResponse] = useState(false);
+  const [isLoadingInitialData, setIsLoadingInitialData] = useState(true);
+
+  useEffect(() => {
+    const loadInitialData = async () => {
+      setIsLoadingInitialData(true);
+      try {
+        const serverData = await fetchChatData();
+        if (serverData && serverData.rooms && serverData.messages) {
+          // Check if localStorage is already populated. If not, or if server data is considered fresher, update.
+          // For this prototype, we'll prioritize server data if it's different or localStorage is empty.
+          const localRoomsExist = window.localStorage.getItem(LOCAL_STORAGE_ROOMS_KEY) !== null;
+          const localMessagesExist = window.localStorage.getItem(LOCAL_STORAGE_MESSAGES_KEY) !== null;
+
+          if (!localRoomsExist || rooms.length === 0) { // Or add more sophisticated sync logic
+            setRooms(serverData.rooms);
+          }
+          if (!localMessagesExist || messages.length === 0) {
+            setMessages(serverData.messages);
+          }
+        } else {
+          // Server fetch failed or returned no data, ensure defaults if localStorage was also empty
+          if (rooms.length === 0) setRooms(DEFAULT_INITIAL_ROOMS);
+          if (messages.length === 0) setMessages(DEFAULT_INITIAL_MESSAGES);
+        }
+      } catch (error) {
+        console.error("Failed to fetch initial chat data from server (simulation):", error);
+        // Fallback to ensure defaults if localStorage was empty and server fetch failed
+        if (rooms.length === 0) setRooms(DEFAULT_INITIAL_ROOMS);
+        if (messages.length === 0) setMessages(DEFAULT_INITIAL_MESSAGES);
+      } finally {
+        setIsLoadingInitialData(false);
+      }
+    };
+    loadInitialData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run once on mount. setRooms/setMessages from useLocalStorage will handle persistence.
 
   useEffect(() => {
     if (currentRoom) {
-      // Simulate fetching online users for the current room
-      // In a real app, this would involve checking against currentRoom.members and a list of actual online users.
-      // For this prototype, we'll filter MOCK_USERS_FOR_ROOM_PRESENCE if their ID is in currentRoom.members.
-      // This assumes MOCK_USERS_FOR_ROOM_PRESENCE contains all potential users.
       const usersInRoom = MOCK_USERS_FOR_ROOM_PRESENCE.filter(u => currentRoom.members.includes(u.id));
-      
-      // If the current authenticated user is part of the room members, ensure they are in onlineUsers.
-      // This handles cases where MOCK_USERS_FOR_ROOM_PRESENCE might not be exhaustive or for dynamically created users.
       if (user && currentRoom.members.includes(user.id) && !usersInRoom.find(onlineUser => onlineUser.id === user.id)) {
         usersInRoom.push(user);
       }
       setOnlineUsers(usersInRoom);
-
     } else {
       setOnlineUsers([]);
     }
-  }, [currentRoom, user]); // Add user to dependencies
+  }, [currentRoom, user, rooms]); // rooms dependency added in case members list changes
   
   const createRoom = useCallback(async (name: string, isPrivate: boolean): Promise<Room | null> => {
     if (!user) return null;
@@ -77,29 +103,46 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       id: `room-${Date.now()}`,
       name,
       isPrivate,
-      members: [user.id], // Owner is initially the only member
+      members: [user.id], 
       ownerId: user.id,
     };
-    setRooms(prev => [...prev, newRoom]);
+    const updatedRooms = [...rooms, newRoom];
+    setRooms(updatedRooms); // This updates localStorage via useLocalStorage
+    
+    try {
+      await syncRoomsToServer({ rooms: updatedRooms });
+      console.log("Rooms synced with server (simulation).");
+    } catch (error) {
+      console.error("Failed to sync rooms with server (simulation):", error);
+      // Handle sync failure if necessary (e.g., queue for later)
+    }
     return newRoom;
-  }, [user, setRooms]);
+  }, [user, rooms, setRooms]);
 
   const joinRoom = useCallback((roomId: string) => {
     const roomToJoin = rooms.find(r => r.id === roomId);
     if (roomToJoin) {
       setCurrentRoom(roomToJoin);
-      // If the user is not already a member of this public room, add them.
-      // For private rooms, an invite system would be needed.
       if (user && !roomToJoin.isPrivate && !roomToJoin.members.includes(user.id)) {
-        setRooms(prevRooms => prevRooms.map(r => 
+        const updatedRooms = rooms.map(r => 
           r.id === roomId ? { ...r, members: [...r.members, user.id] } : r
-        ));
+        );
+        setRooms(updatedRooms); // This updates localStorage
+        // Consider syncing room membership change to server here as well
+        syncRoomsToServer({ rooms: updatedRooms }).catch(error => 
+          console.error("Failed to sync room membership update to server (simulation):", error)
+        );
       }
     }
   }, [rooms, user, setRooms]);
 
-  const addMessage = (message: Message) => {
-    setMessages(prev => [...prev, message]);
+  const addMessageToStateAndStorage = (message: Message) => {
+    const updatedMessages = [...messages, message];
+    setMessages(updatedMessages); // This updates localStorage
+
+    syncMessagesToServer({ messages: updatedMessages }).catch(error =>
+      console.error("Failed to sync new message to server (simulation):", error)
+    );
   };
 
   const handleAiCommand = async (command: string, arg: string) => {
@@ -111,8 +154,8 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         const output = await aiTutorialCommand({ command, userInput: arg });
         aiResponseContent = output.tutorialContent;
       } else if (command === '/suggest-room') {
-         const userMessages = messages.filter(m => m.userId === user.id && m.roomId === currentRoom.id).slice(-3).map(m => m.content).join('\n');
-        const output = await suggestRoomOnboarding({ userMessage: userMessages || "I'm new here and looking for interesting topics." });
+         const userMessagesContent = messages.filter(m => m.userId === user.id && m.roomId === currentRoom.id).slice(-3).map(m => m.content).join('\n');
+        const output = await suggestRoomOnboarding({ userMessage: userMessagesContent || "I'm new here and looking for interesting topics." });
         aiResponseContent = `Suggested rooms: ${output.suggestedRooms.join(', ')}. Reasoning: ${output.reasoning}`;
       } else if (command === '/help') {
         aiResponseContent = "Available commands: /tutorial <topic>, /suggest-room, /help. How can I assist you?";
@@ -128,7 +171,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
           timestamp: Date.now(),
           isAIMessage: true,
         };
-        addMessage(aiMessage);
+        addMessageToStateAndStorage(aiMessage);
       }
     } catch (error) {
       console.error("AI command error:", error);
@@ -141,7 +184,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         timestamp: Date.now(),
         isAIMessage: true,
       };
-      addMessage(errorMessage);
+      addMessageToStateAndStorage(errorMessage);
     } finally {
       setIsLoadingAiResponse(false);
     }
@@ -163,13 +206,13 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         content,
         timestamp: Date.now(),
       };
-      addMessage(newMessage);
+      addMessageToStateAndStorage(newMessage);
     }
-  }, [user, currentRoom, messages, setMessages, handleAiCommand]); // Added setMessages to dependency array
+  }, [user, currentRoom, messages, setMessages, handleAiCommand]);
 
 
   return (
-    <ChatContext.Provider value={{ rooms, messages, currentRoom, onlineUsers, createRoom, joinRoom, sendMessage, isLoadingAiResponse }}>
+    <ChatContext.Provider value={{ rooms, messages, currentRoom, onlineUsers, createRoom, joinRoom, sendMessage, isLoadingAiResponse, isLoadingInitialData }}>
       {children}
     </ChatContext.Provider>
   );
