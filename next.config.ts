@@ -19,7 +19,7 @@ const nextConfig: NextConfig = {
     ],
   },
   webpack: (config, { isServer }) => {
-    // Fix for 'async_hooks' module not found error with OpenTelemetry
+    // This fallback is for Webpack (e.g., `next build` or `next dev` without --turbopack)
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,
@@ -29,6 +29,15 @@ const nextConfig: NextConfig = {
 
     // Important: return the modified config
     return config;
+  },
+  experimental: {
+    turbopack: {
+      resolveAlias: {
+        // For Turbopack, alias 'async_hooks' to false (empty module).
+        // This applies to client-side bundles where 'async_hooks' is not available.
+        'async_hooks': false,
+      },
+    },
   },
 };
 
