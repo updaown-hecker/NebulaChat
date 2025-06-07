@@ -1,14 +1,16 @@
+
 "use client";
 
 import type { User } from '@/types';
 import React, { createContext, useContext, ReactNode, useMemo } from 'react';
 import useLocalStorage from '@/hooks/use-local-storage';
-import { LOCAL_STORAGE_USER_KEY, LOCAL_STORAGE_ACCOUNTS_KEY } from '@/lib/constants';
+import { LOCAL_STORAGE_USER_KEY } from '@/lib/constants';
 import { useToast } from '@/hooks/use-toast';
+import { loginUser, registerUser } from '@/ai/flows/auth-flow'; // Import new simulated auth flows
 
 interface AuthContextType {
   user: User | null;
-  login: (username: string, password?: string) => Promise<boolean>;
+  login: (username: string, password?: string, isGuestAttempt?: boolean) => Promise<boolean>;
   logout: () => void;
   register: (username: string, password?: string) => Promise<boolean>;
   isAuthenticated: boolean;
@@ -18,42 +20,56 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useLocalStorage<User | null>(LOCAL_STORAGE_USER_KEY, null);
-  const [accounts, setAccounts] = useLocalStorage<User[]>(LOCAL_STORAGE_ACCOUNTS_KEY, []);
+  // Accounts list is no longer managed in localStorage by AuthContext; it's simulated by auth-flow.ts
   const { toast } = useToast();
 
-  const login = async (username: string, password?: string): Promise<boolean> => {
-    const existingUser = accounts.find(acc => acc.username === username);
-    if (existingUser) {
-      // In a real app, securely compare hashed passwords. Here, we'll do a simple check.
-      if (existingUser.password === password || (!existingUser.password && !password)) { // Allows login if no password was set and none provided
-        const loggedInUser: User = { ...existingUser, isGuest: false };
-        setUser(loggedInUser);
-        toast({ title: "Login Successful", description: `Welcome back, ${username}!` });
+  const login = async (username: string, password?: string, isGuestAttempt?: boolean): Promise<boolean> => {
+    if (isGuestAttempt) {
+      // Handle guest login directly (client-side only)
+      const guestUser: User = {
+        id: `guest-${Date.now()}`,
+        username: username, // username is pre-generated for guests in LoginForm
+        isGuest: true,
+      };
+      setUser(guestUser);
+      // No toast for guest login, it's usually silent
+      return true;
+    }
+
+    // Account-based login, call simulated server flow
+    try {
+      const response = await loginUser({ username, password });
+      if (response.success && response.user) {
+        setUser(response.user); // response.user should not contain password
+        toast({ title: "Login Successful", description: `Welcome back, ${response.user.username}!` });
         return true;
       } else {
-        toast({ title: "Login Failed", description: "Invalid username or password.", variant: "destructive" });
+        toast({ title: "Login Failed", description: response.message || "Invalid credentials.", variant: "destructive" });
         return false;
       }
+    } catch (error) {
+      console.error("Login flow error:", error);
+      toast({ title: "Login Error", description: "Could not connect to login service.", variant: "destructive" });
+      return false;
     }
-    toast({ title: "Login Failed", description: "User not found.", variant: "destructive" });
-    return false;
   };
 
   const register = async (username: string, password?: string): Promise<boolean> => {
-    if (accounts.some(acc => acc.username === username)) {
-      toast({ title: "Registration Failed", description: "Username already exists.", variant: "destructive" });
+    try {
+      const response = await registerUser({ username, password });
+      if (response.success && response.user) {
+        setUser(response.user); // response.user should not contain password
+        toast({ title: "Registration Successful", description: `Welcome, ${response.user.username}! Your account has been created.` });
+        return true;
+      } else {
+        toast({ title: "Registration Failed", description: response.message || "Could not create account.", variant: "destructive" });
+        return false;
+      }
+    } catch (error) {
+      console.error("Register flow error:", error);
+      toast({ title: "Registration Error", description: "Could not connect to registration service.", variant: "destructive" });
       return false;
     }
-    const newUser: User = {
-      id: `user-${Date.now()}`,
-      username,
-      password, // Storing password directly is insecure for real apps!
-      isGuest: false,
-    };
-    setAccounts(prevAccounts => [...prevAccounts, newUser]);
-    setUser(newUser);
-    toast({ title: "Registration Successful", description: `Welcome, ${username}! Your account has been created.` });
-    return true;
   };
 
   const logout = () => {
@@ -61,7 +77,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     toast({ title: "Logged Out", description: "You have been successfully logged out." });
   };
 
-  const isAuthenticated = useMemo(() => !!user && !user.isGuest, [user]); // Guests are not "authenticated" in the sense of having an account
+  const isAuthenticated = useMemo(() => !!user && !user.isGuest, [user]);
 
   return (
     <AuthContext.Provider value={{ user, login, logout, register, isAuthenticated }}>
