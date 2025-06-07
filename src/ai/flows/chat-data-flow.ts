@@ -1,21 +1,21 @@
 
 'use server';
 /**
- * @fileOverview Simulates server-side operations for fetching and syncing chat data.
+ * @fileOverview Simulates server-side operations for fetching and syncing chat data, using JSON files for persistence.
  * In a real application, these flows would interact with a database.
  *
- * - fetchChatDataFlow - Simulates fetching initial rooms and messages.
- * - syncRoomsToServerFlow - Simulates saving rooms to a server.
- * - syncMessagesToServerFlow - Simulates saving messages to a server.
+ * - fetchChatDataFlow - Fetches initial rooms and messages from JSON files.
+ * - syncRoomsToServerFlow - Saves rooms to a JSON file.
+ * - syncMessagesToServerFlow - Saves messages to a JSON file.
  */
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import type { Room, Message } from '@/types'; // Assuming your types are here
+import type { Room, Message } from '@/types';
+import fs from 'fs';
+import path from 'path';
 
-// Define Zod schemas for Room and Message if not already globally available for Genkit
-// For simplicity, we'll assume they are compatible with what `types.ts` defines.
-// If specific schema validation is needed here, define Zod schemas.
+// Define Zod schemas for Room and Message
 const RoomSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -34,18 +34,55 @@ const MessageSchema = z.object({
   isAIMessage: z.boolean().optional(),
 });
 
-
-// Initial data to simulate a server database
-const INITIAL_MOCK_ROOMS_SERVER: Room[] = [
+// Initial default data if JSON files don't exist
+const DEFAULT_MOCK_ROOMS_SERVER: Room[] = [
   { id: 'general', name: 'General', isPrivate: false, members: ['user1', 'user2', 'guest1'], ownerId: 'user1' },
   { id: 'random', name: 'Random', isPrivate: false, members: ['user1', 'guest1'], ownerId: 'user1' },
-  { id: 'dev-talk', name: 'Dev Talk', isPrivate: false, members: ['user2'], ownerId: 'user2' },
 ];
 
-const INITIAL_MOCK_MESSAGES_SERVER: Message[] = [
-  { id: 'msg1', roomId: 'general', userId: 'user1', username: 'Alice', content: 'Hello from server!', timestamp: Date.now() - 100000 },
-  { id: 'msg2', roomId: 'general', userId: 'user2', username: 'Bob', content: 'Hi Alice (server)!', timestamp: Date.now() - 90000 },
+const DEFAULT_MOCK_MESSAGES_SERVER: Message[] = [
+  { id: 'msg1', roomId: 'general', userId: 'user1', username: 'Alice', content: 'Hello from persistent store!', timestamp: Date.now() - 100000 },
 ];
+
+const DATA_DIR = path.join(process.cwd(), 'src', 'ai', 'data');
+const ROOMS_FILE_PATH = path.join(DATA_DIR, 'rooms.json');
+const MESSAGES_FILE_PATH = path.join(DATA_DIR, 'messages.json');
+
+// Helper to ensure data directory exists
+const ensureDataDirExists = () => {
+  if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+  }
+};
+
+// Generic helper to read data from a JSON file
+const readDataFromFile = <T>(filePath: string, defaultData: T): T => {
+  ensureDataDirExists();
+  if (!fs.existsSync(filePath)) {
+    // Write default data to the file if it doesn't exist
+    writeDataToFile(filePath, defaultData);
+    return defaultData;
+  }
+  try {
+    const fileContent = fs.readFileSync(filePath, 'utf-8');
+    return JSON.parse(fileContent) as T;
+  } catch (error) {
+    console.error(`Error reading file ${filePath}:`, error);
+    // Write default data if file is corrupt or unparsable
+    writeDataToFile(filePath, defaultData);
+    return defaultData;
+  }
+};
+
+// Generic helper to write data to a JSON file
+const writeDataToFile = <T>(filePath: string, data: T): void => {
+  ensureDataDirExists();
+  try {
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+  } catch (error) {
+    console.error(`Error writing file ${filePath}:`, error);
+  }
+};
 
 
 const FetchChatDataOutputSchema = z.object({
@@ -64,11 +101,12 @@ const fetchChatDataFlow = ai.defineFlow(
     outputSchema: FetchChatDataOutputSchema,
   },
   async () => {
-    console.log('Simulating: Fetching initial chat data from server...');
-    // In a real app, fetch from a database
+    console.log('Fetching initial chat data from JSON files...');
+    const rooms = readDataFromFile<Room[]>(ROOMS_FILE_PATH, DEFAULT_MOCK_ROOMS_SERVER);
+    const messages = readDataFromFile<Message[]>(MESSAGES_FILE_PATH, DEFAULT_MOCK_MESSAGES_SERVER);
     return {
-      rooms: INITIAL_MOCK_ROOMS_SERVER,
-      messages: INITIAL_MOCK_MESSAGES_SERVER,
+      rooms,
+      messages,
     };
   }
 );
@@ -95,10 +133,9 @@ const syncRoomsToServerFlow = ai.defineFlow(
     outputSchema: SyncOutputSchema,
   },
   async (input) => {
-    console.log(`Simulating: Syncing ${input.rooms.length} rooms to server...`);
-    // In a real app, save to a database
-    // For now, we just acknowledge. The actual persistence is handled client-side with localStorage.
-    return { success: true, message: "Rooms synced with server (simulation)." };
+    console.log(`Syncing ${input.rooms.length} rooms to JSON file...`);
+    writeDataToFile<Room[]>(ROOMS_FILE_PATH, input.rooms);
+    return { success: true, message: "Rooms synced to JSON file." };
   }
 );
 
@@ -119,9 +156,8 @@ const syncMessagesToServerFlow = ai.defineFlow(
     outputSchema: SyncOutputSchema,
   },
   async (input) => {
-    console.log(`Simulating: Syncing ${input.messages.length} messages to server...`);
-    // In a real app, save to a database
-    return { success: true, message: "Messages synced with server (simulation)." };
+    console.log(`Syncing ${input.messages.length} messages to JSON file...`);
+    writeDataToFile<Message[]>(MESSAGES_FILE_PATH, input.messages);
+    return { success: true, message: "Messages synced to JSON file." };
   }
 );
-
