@@ -3,6 +3,7 @@ export interface User {
   username: string;
   avatar?: string; // URL to avatar image
   isGuest?: boolean;
+  password?: string; // For local "account" simulation
 }
 
 export interface Room {
