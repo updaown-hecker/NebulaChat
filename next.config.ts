@@ -30,15 +30,13 @@ const nextConfig: NextConfig = {
     // Important: return the modified config
     return config;
   },
-  experimental: {
-    turbopack: {
-      resolveAlias: {
-        // For Turbopack, alias 'async_hooks' to false (empty module).
-        // This applies to client-side bundles where 'async_hooks' is not available.
-        'async_hooks': false,
-      },
-    },
-  },
+  // The 'experimental.turbopack' configuration was removed because Next.js 15.3.3
+  // reported 'turbopack' as an unrecognized key within the 'experimental' object.
+  // This fixed the immediate config validation error.
+  // However, this means there's no explicit Turbopack config for 'async_hooks' aliasing.
+  // If 'async_hooks' issues persist with Turbopack, a different approach for this Next.js
+  // version might be needed, or it could indicate a bug in Next.js 15.3.3 config handling.
+  // The Webpack fallback for 'async_hooks' remains.
 };
 
 export default nextConfig;
