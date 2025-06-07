@@ -1,4 +1,4 @@
-// use server'
+'use server';
 
 /**
  * @fileOverview This file implements the Genkit flow for suggesting relevant public rooms to new users based on their initial messages.
