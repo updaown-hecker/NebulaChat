@@ -8,5 +8,12 @@
     "id": "user2",
     "username": "Bob",
     "isTypingInRoomId": null
+  },
+  {
+    "id": "user-1749337377092-9f2f7",
+    "username": "updaown",
+    "password": "1",
+    "isGuest": false,
+    "isTypingInRoomId": null
   }
 ]

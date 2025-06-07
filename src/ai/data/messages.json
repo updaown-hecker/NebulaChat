@@ -1,21 +1,5 @@
 [
   {
-    "id": "msg1",
-    "roomId": "general",
-    "userId": "user1",
-    "username": "Alice",
-    "content": "Hello everyone!",
-    "timestamp": 1749334908421
-  },
-  {
-    "id": "msg2",
-    "roomId": "general",
-    "userId": "user2",
-    "username": "Bob",
-    "content": "Hi Alice!",
-    "timestamp": 1749334918421
-  },
-  {
     "id": "msg3",
     "roomId": "random",
     "userId": "guest1",
@@ -88,6 +72,22 @@
     "timestamp": 1749336092745
   },
   {
+    "id": "msg1",
+    "roomId": "general",
+    "userId": "user1",
+    "username": "Alice",
+    "content": "Hello from server!",
+    "timestamp": 1749336217534
+  },
+  {
+    "id": "msg2",
+    "roomId": "general",
+    "userId": "user2",
+    "username": "Bob",
+    "content": "Hi Alice (server)!",
+    "timestamp": 1749336227534
+  },
+  {
     "id": "msg-1749336413708",
     "roomId": "general",
     "userId": "user-1749336395407",
@@ -142,5 +142,13 @@
     "username": "updaown",
     "content": "Hi",
     "timestamp": 1749337161066
+  },
+  {
+    "id": "msg-1749337391207-lbw5h",
+    "roomId": "general",
+    "userId": "user-1749337377092-9f2f7",
+    "username": "updaown",
+    "content": "Nig",
+    "timestamp": 1749337391207
   }
 ]

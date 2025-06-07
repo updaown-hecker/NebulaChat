@@ -70,23 +70,6 @@ const ensureDataDirExists = () => {
   }
 };
 
-// Generic helper to read data from a JSON file
-const readDataFromFile = <T>(filePath: string, defaultData: T): T => {
-  ensureDataDirExists();
-  if (!fs.existsSync(filePath)) {
-    writeDataToFile(filePath, defaultData);
-    return defaultData;
-  }
-  try {
-    const fileContent = fs.readFileSync(filePath, 'utf-8');
-    return JSON.parse(fileContent) as T;
-  } catch (error) {
-    console.error(`Error reading file ${filePath}:`, error);
-    writeDataToFile(filePath, defaultData);
-    return defaultData;
-  }
-};
-
 // Generic helper to write data to a JSON file
 const writeDataToFile = <T>(filePath: string, data: T): void => {
   ensureDataDirExists();
@@ -94,6 +77,33 @@ const writeDataToFile = <T>(filePath: string, data: T): void => {
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
   } catch (error) {
     console.error(`Error writing file ${filePath}:`, error);
+  }
+};
+
+// Generic helper to read data from a JSON file
+const readDataFromFile = <T>(filePath: string, defaultData: T): T => {
+  ensureDataDirExists();
+  if (!fs.existsSync(filePath)) {
+    // File doesn't exist, so create it with default data
+    writeDataToFile(filePath, defaultData);
+    return defaultData;
+  }
+  try {
+    const fileContent = fs.readFileSync(filePath, 'utf-8');
+    // If file is empty or only whitespace, it's not valid JSON.
+    if (fileContent.trim() === '') {
+      console.warn(`File ${filePath} is empty or contains only whitespace. Returning default data. The file will NOT be overwritten with defaults at this stage.`);
+      return defaultData;
+    }
+    return JSON.parse(fileContent) as T;
+  } catch (error) {
+    // Catch JSON.parse errors for non-empty but malformed files
+    console.error(`Error parsing JSON from file ${filePath}:`, error);
+    // Log a preview of the file content for easier debugging without printing potentially huge files.
+    const fileContentForDebug = fs.readFileSync(filePath, 'utf-8');
+    console.warn(`Content preview (up to 500 chars): ${fileContentForDebug.substring(0,500)}...`);
+    console.warn(`Returning default data for ${filePath} due to parsing error. The original file has NOT been overwritten with defaults by this read operation.`);
+    return defaultData;
   }
 };
 
@@ -181,3 +191,4 @@ const syncMessagesToServerFlow = ai.defineFlow(
     return { success: true, message: "Messages synced to JSON file." };
   }
 );
+
