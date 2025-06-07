@@ -5,6 +5,8 @@ import React, { createContext, useContext, useState, ReactNode, useCallback, use
 import { useAuth } from './auth-context';
 import { suggestRoomOnboarding } from '@/ai/flows/suggest-room-onboarding';
 import { aiTutorialCommand } from '@/ai/flows/ai-tutorial-command';
+import useLocalStorage from '@/hooks/use-local-storage';
+import { LOCAL_STORAGE_MESSAGES_KEY, LOCAL_STORAGE_ROOMS_KEY } from '@/lib/constants';
 
 interface ChatContextType {
   rooms: Room[];
@@ -19,30 +21,32 @@ interface ChatContextType {
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
-// Mock data
-const MOCK_ROOMS: Room[] = [
+// Mock data - used as initial values if localStorage is empty
+const INITIAL_MOCK_ROOMS: Room[] = [
   { id: 'general', name: 'General', isPrivate: false, members: ['user1', 'user2', 'guest1'], ownerId: 'user1' },
   { id: 'random', name: 'Random', isPrivate: false, members: ['user1', 'guest1'], ownerId: 'user1' },
   { id: 'dev-talk', name: 'Dev Talk', isPrivate: false, members: ['user2'], ownerId: 'user2' },
 ];
 
-const MOCK_MESSAGES: Message[] = [
+const INITIAL_MOCK_MESSAGES: Message[] = [
   { id: 'msg1', roomId: 'general', userId: 'user1', username: 'Alice', content: 'Hello everyone!', timestamp: Date.now() - 100000 },
   { id: 'msg2', roomId: 'general', userId: 'user2', username: 'Bob', content: 'Hi Alice!', timestamp: Date.now() - 90000 },
   { id: 'msg3', roomId: 'random', userId: 'guest1', username: 'Guest User', content: 'Anyone here?', timestamp: Date.now() - 80000 },
 ];
 
-const MOCK_USERS: User[] = [
+// This list is for populating onlineUsers, not for auth.
+const MOCK_USERS_FOR_ROOM_PRESENCE: User[] = [
     { id: 'user1', username: 'Alice' },
     { id: 'user2', username: 'Bob' },
     { id: 'guest1', username: 'Guest User', isGuest: true },
+    // Add any other users who might appear in rooms here
 ];
 
 
 export const ChatProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
-  const [rooms, setRooms] = useState<Room[]>(MOCK_ROOMS);
-  const [messages, setMessages] = useState<Message[]>(MOCK_MESSAGES);
+  const [rooms, setRooms] = useLocalStorage<Room[]>(LOCAL_STORAGE_ROOMS_KEY, INITIAL_MOCK_ROOMS);
+  const [messages, setMessages] = useLocalStorage<Message[]>(LOCAL_STORAGE_MESSAGES_KEY, INITIAL_MOCK_MESSAGES);
   const [currentRoom, setCurrentRoom] = useState<Room | null>(null);
   const [onlineUsers, setOnlineUsers] = useState<User[]>([]);
   const [isLoadingAiResponse, setIsLoadingAiResponse] = useState(false);
@@ -50,12 +54,22 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (currentRoom) {
       // Simulate fetching online users for the current room
-      const usersInRoom = MOCK_USERS.filter(u => currentRoom.members.includes(u.id));
+      // In a real app, this would involve checking against currentRoom.members and a list of actual online users.
+      // For this prototype, we'll filter MOCK_USERS_FOR_ROOM_PRESENCE if their ID is in currentRoom.members.
+      // This assumes MOCK_USERS_FOR_ROOM_PRESENCE contains all potential users.
+      const usersInRoom = MOCK_USERS_FOR_ROOM_PRESENCE.filter(u => currentRoom.members.includes(u.id));
+      
+      // If the current authenticated user is part of the room members, ensure they are in onlineUsers.
+      // This handles cases where MOCK_USERS_FOR_ROOM_PRESENCE might not be exhaustive or for dynamically created users.
+      if (user && currentRoom.members.includes(user.id) && !usersInRoom.find(onlineUser => onlineUser.id === user.id)) {
+        usersInRoom.push(user);
+      }
       setOnlineUsers(usersInRoom);
+
     } else {
       setOnlineUsers([]);
     }
-  }, [currentRoom]);
+  }, [currentRoom, user]); // Add user to dependencies
   
   const createRoom = useCallback(async (name: string, isPrivate: boolean): Promise<Room | null> => {
     if (!user) return null;
@@ -63,20 +77,26 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       id: `room-${Date.now()}`,
       name,
       isPrivate,
-      members: [user.id],
+      members: [user.id], // Owner is initially the only member
       ownerId: user.id,
     };
     setRooms(prev => [...prev, newRoom]);
     return newRoom;
-  }, [user]);
+  }, [user, setRooms]);
 
   const joinRoom = useCallback((roomId: string) => {
     const roomToJoin = rooms.find(r => r.id === roomId);
     if (roomToJoin) {
       setCurrentRoom(roomToJoin);
-      // In a real app, you might add the user to room members if not already present
+      // If the user is not already a member of this public room, add them.
+      // For private rooms, an invite system would be needed.
+      if (user && !roomToJoin.isPrivate && !roomToJoin.members.includes(user.id)) {
+        setRooms(prevRooms => prevRooms.map(r => 
+          r.id === roomId ? { ...r, members: [...r.members, user.id] } : r
+        ));
+      }
     }
-  }, [rooms]);
+  }, [rooms, user, setRooms]);
 
   const addMessage = (message: Message) => {
     setMessages(prev => [...prev, message]);
@@ -145,7 +165,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       };
       addMessage(newMessage);
     }
-  }, [user, currentRoom, messages]);
+  }, [user, currentRoom, messages, setMessages, handleAiCommand]); // Added setMessages to dependency array
 
 
   return (
