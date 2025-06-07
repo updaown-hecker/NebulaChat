@@ -40,13 +40,12 @@ const nextConfig: NextConfig = {
   // The Webpack fallback for 'async_hooks' remains.
   ...(process.env.NODE_ENV === 'development' && {
     devIndicators: {
-      buildActivityPosition: 'bottom-right',
+      position: 'bottom-right', // Renamed from buildActivityPosition
     },
-    experimental: {
-        allowedDevOrigins: [
-            'https://6000-firebase-studio-1749331662472.cluster-joak5ukfbnbyqspg4tewa33d24.cloudworkstations.dev',
-        ],
-    }
+    // The 'experimental.allowedDevOrigins' configuration was removed because Next.js 15.3.3
+    // reported 'allowedDevOrigins' as an unrecognized key within the 'experimental' object.
+    // This fixed the config validation error, but the cross-origin warning may reappear.
+    // This might indicate a bug or specific behavior in Next.js 15.3.3 with Turbopack.
   }),
 };
 
