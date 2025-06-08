@@ -325,5 +325,13 @@
     "content": "Hi",
     "timestamp": 1749350466440,
     "isEdited": false
+  },
+  {
+    "id": "msg-1749352460097-nqzaf",
+    "roomId": "general",
+    "userId": "user1",
+    "username": "admin",
+    "content": "up",
+    "timestamp": 1749352460097
   }
 ]
