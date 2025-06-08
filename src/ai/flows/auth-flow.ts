@@ -18,7 +18,7 @@ import path from 'path';
 // --- Schemas ---
 const AuthInputSchema = z.object({
   username: z.string(),
-  password: z.string().optional(), 
+  password: z.string().optional(),
 });
 export type AuthInput = z.infer<typeof AuthInputSchema>;
 
@@ -64,6 +64,7 @@ const readUsersFromFile = (): User[] => {
   }
   try {
     const fileContent = fs.readFileSync(USERS_FILE_PATH, 'utf-8');
+    if (fileContent.trim() === '') return []; // Handle empty file
     return JSON.parse(fileContent) as User[];
   } catch (error) {
     console.error('Error reading users file:', error);
@@ -98,21 +99,25 @@ const registerUserFlow = ai.defineFlow(
     if (!password) {
         return { success: false, user: null, message: 'Password is required for registration.' };
     }
+    if (!username || username.trim() === '') {
+        return { success: false, user: null, message: 'Username cannot be empty.' };
+    }
+
 
     const users = readUsersFromFile();
-    if (users.find(acc => acc.username === username)) {
-      return { success: false, user: null, message: 'Username already exists.' };
+    if (users.find(acc => acc.username === username.trim())) {
+      return { success: false, user: null, message: 'Username already exists. Please choose a different one.' };
     }
     const newUser: User = {
       id: `user-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-      username,
+      username: username.trim(),
       password, // In a real app, HASH this password securely!
       isGuest: false,
       isTypingInRoomId: null,
     };
     users.push(newUser);
     writeUsersToFile(users);
-    
+
     const { password: _p, ...userToReturn } = newUser;
     return { success: true, user: userToReturn, message: 'User registered successfully.' };
   }
@@ -135,7 +140,9 @@ const loginUserFlow = ai.defineFlow(
     const account = users.find(acc => acc.username === username);
 
     if (account) {
-      if (account.password === password || (!account.password && !password)) {
+      // For registered users, password must match.
+      // For guest accounts (if they somehow end up in users.json without a password, though they shouldn't via this flow), password check is skipped.
+      if ((account.password && account.password === password) || (!account.password && !password && account.isGuest)) {
         const { password: _p, ...userToReturn } = account;
         return { success: true, user: userToReturn, message: 'Login successful.' };
       }
