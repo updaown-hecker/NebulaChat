@@ -110,6 +110,16 @@ npm start
 # or
 yarn start
 ```
+## Google AI API Key
+
+This application uses Genkit with the `googleAI` plugin for its AI-powered features (e.g., AI chat assistant commands). To enable these features, you need a Google AI API key.
+
+1.  Obtain an API key from [Google AI Studio](https://aistudio.google.com/app/apikey).
+2.  Create a file named `.env` in the root of this project (if it doesn't already exist).
+3.  Add your API key to the `.env` file like this:
+    ```
+    GOOGLE_API_KEY=YOUR_API_KEY_HERE
+    ```
 
 ## Contributing
 
@@ -137,13 +147,3 @@ How can people reach you if they have questions or feedback?
 
 This section will describe the environment variables required to run the project.
 
-### Google AI API Key
-
-This application uses Genkit with the `googleAI` plugin for its AI-powered features (e.g., AI chat assistant commands). To enable these features, you need a Google AI API key.
-
-1.  Obtain an API key from [Google AI Studio](https://aistudio.google.com/app/apikey).
-2.  Create a file named `.env` in the root of this project (if it doesn't already exist).
-3.  Add your API key to the `.env` file like this:
-    ```
-    GOOGLE_API_KEY=YOUR_API_KEY_HERE
-    ```
