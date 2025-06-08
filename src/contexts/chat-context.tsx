@@ -7,7 +7,8 @@ import { useAuth } from './auth-context';
 import { suggestRoomOnboarding } from '@/ai/flows/suggest-room-onboarding';
 import { aiTutorialCommand } from '@/ai/flows/ai-tutorial-command';
 import { fetchChatData, syncRoomsToServer, syncMessagesToServer } from '@/ai/flows/chat-data-flow';
-import { updateUserTypingStatus } from '@/ai/flows/auth-flow'; // For typing status
+import { updateUserTypingStatus } from '@/ai/flows/auth-flow';
+import { searchUsers, sendFriendRequest as sendFriendRequestFlow, acceptFriendRequest as acceptFriendRequestFlow, declineOrCancelFriendRequest as declineOrCancelFriendRequestFlow, removeFriend as removeFriendFlow } from '@/ai/flows/friend-flow';
 import useLocalStorage from '@/hooks/use-local-storage';
 import {
   LOCAL_STORAGE_MESSAGES_KEY,
@@ -15,22 +16,30 @@ import {
   LOCAL_STORAGE_LAST_ACTIVE_ROOM_ID_KEY,
   LOCAL_STORAGE_UNREAD_ROOM_IDS_KEY
 } from '@/lib/constants';
+import { useToast } from '@/hooks/use-toast';
 
 interface ChatContextType {
   rooms: Room[];
   messages: Message[];
   currentRoom: Room | null;
-  allUsers: User[]; // Expose allUsers
-  onlineUsers: User[]; // Kept for potential specific "online in current room" features
-  typingUsers: User[]; // Users currently typing in the active room
+  allUsers: User[];
+  searchedUsers: User[];
+  onlineUsers: User[];
+  typingUsers: User[];
   createRoom: (name: string, isPrivate: boolean) => Promise<Room | null>;
   joinRoom: (roomId: string) => void;
   startDirectMessage: (otherUserId: string) => Promise<void>;
   sendMessage: (content: string) => Promise<void>;
-  setUserTyping: (isTyping: boolean) => void; // Method to report typing status
+  setUserTyping: (isTyping: boolean) => void;
   isLoadingAiResponse: boolean;
   isLoadingInitialData: boolean;
   unreadRoomIds: Record<string, boolean>;
+  searchAllUsers: (query: string) => Promise<void>;
+  sendFriendRequest: (recipientId: string) => Promise<boolean>;
+  acceptFriendRequest: (requesterId: string) => Promise<boolean>;
+  declineOrCancelFriendRequest: (otherUserId: string) => Promise<boolean>;
+  removeFriend: (friendId: string) => Promise<boolean>;
+  refreshAllUsers: () => Promise<void>; // To update user data after friend actions
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -48,15 +57,17 @@ const TYPING_DEBOUNCE_TIME = 500;
 
 export const ChatProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [rooms, setRooms] = useLocalStorage<Room[]>(LOCAL_STORAGE_ROOMS_KEY, []);
   const [messages, setMessages] = useLocalStorage<Message[]>(LOCAL_STORAGE_MESSAGES_KEY, []);
   const [allUsers, setAllUsers] = useLocalStorage<User[]>('nebulaChatAllUsers', []);
+  const [searchedUsers, setSearchedUsers] = useState<User[]>([]);
 
   const [currentRoom, setCurrentRoom] = useState<Room | null>(null);
   const [lastActiveRoomId, setLastActiveRoomId] = useLocalStorage<string | null>(LOCAL_STORAGE_LAST_ACTIVE_ROOM_ID_KEY, null);
   const [unreadRoomIds, setUnreadRoomIds] = useLocalStorage<Record<string, boolean>>(LOCAL_STORAGE_UNREAD_ROOM_IDS_KEY, {});
 
-  const [onlineUsers, setOnlineUsers] = useState<User[]>([]); // Specific to current room members who are "active"
+  const [onlineUsers, setOnlineUsers] = useState<User[]>([]);
   const [typingUsers, setTypingUsers] = useState<User[]>([]);
   const [isLoadingAiResponse, setIsLoadingAiResponse] = useState(false);
   const [isLoadingInitialData, setIsLoadingInitialData] = useState(true);
@@ -69,15 +80,31 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastSentTypingStatusRef = useRef<boolean>(false);
 
+  const refreshAllUsers = useCallback(async () => {
+    try {
+      const serverData = await fetchChatData(); // This fetches all data including users
+      if (serverData && serverData.users) {
+        setAllUsers(serverData.users);
+      }
+    } catch (error) {
+      console.error("Error refreshing user data:", error);
+      toast({ title: "Error", description: "Could not refresh user data.", variant: "destructive" });
+    }
+  }, [setAllUsers, toast]);
+
   const fetchAndUpdateChatData = useCallback(async (isInitialLoad = false) => {
     try {
       const serverData = await fetchChatData();
       let roomsToSyncOnServer: Room[] | null = null;
       let messagesToSyncOnServer: Message[] | null = null;
+      let usersToUpdateLocally: User[] | null = null;
 
       if (serverData) {
         if (serverData.users) {
-          setAllUsers(serverData.users);
+          // Check if users data has changed significantly to warrant a local update
+          if (JSON.stringify(serverData.users) !== JSON.stringify(allUsers)) {
+             usersToUpdateLocally = serverData.users;
+          }
         }
 
         if (serverData.rooms) {
@@ -86,11 +113,11 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
             const newRoomsFromServer = serverData.rooms.filter(sr => !localRoomIds.has(sr.id));
             const serverRoomIds = new Set(serverData.rooms.map(r => r.id));
             const roomsMerged = [
-              ...serverData.rooms, // Take server rooms as primary
-              ...prevLocalRooms.filter(lr => !serverRoomIds.has(lr.id)) // Add local-only rooms
+              ...serverData.rooms, 
+              ...prevLocalRooms.filter(lr => !serverRoomIds.has(lr.id)) 
             ];
 
-            if (newRoomsFromServer.length > 0 || prevLocalRooms.length !== roomsMerged.length) {
+            if (newRoomsFromServer.length > 0 || prevLocalRooms.length !== roomsMerged.length || JSON.stringify(roomsMerged) !== JSON.stringify(prevLocalRooms)) {
               roomsToSyncOnServer = roomsMerged;
               return roomsMerged;
             }
@@ -115,24 +142,22 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
                 ...prevLocalMessages.filter(lm => !serverMessageIds.has(lm.id))
             ].sort((a, b) => a.timestamp - b.timestamp);
 
-
-            if (newMessagesFromServer.length > 0 || prevLocalMessages.length !== messagesMerged.length) {
+            if (newMessagesFromServer.length > 0 || prevLocalMessages.length !== messagesMerged.length || JSON.stringify(messagesMerged) !== JSON.stringify(prevLocalMessages)) {
               messagesToSyncOnServer = messagesMerged;
               return messagesMerged;
             }
             return prevLocalMessages;
           });
         }
-
+        
+        if (usersToUpdateLocally) {
+          setAllUsers(usersToUpdateLocally);
+        }
         if (roomsToSyncOnServer) {
-          syncRoomsToServer({ rooms: roomsToSyncOnServer }).catch(error =>
-            console.error("Failed to sync merged rooms to server (simulation):", error)
-          );
+          await syncRoomsToServer({ rooms: roomsToSyncOnServer });
         }
         if (messagesToSyncOnServer) {
-          syncMessagesToServer({ messages: messagesToSyncOnServer }).catch(error =>
-            console.error("Failed to sync merged messages to server (simulation):", error)
-          );
+          await syncMessagesToServer({ messages: messagesToSyncOnServer });
         }
 
         if (isInitialLoad) {
@@ -173,8 +198,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         setIsLoadingInitialData(false);
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, lastActiveRoomId, setLastActiveRoomId, setRooms, setMessages, setAllUsers, setUnreadRoomIds, rooms]); // Added rooms to deps for currentRoomsList
+  }, [user?.id, lastActiveRoomId, setLastActiveRoomId, setRooms, setMessages, setAllUsers, setUnreadRoomIds, rooms, allUsers]);
 
   useEffect(() => {
     fetchAndUpdateChatData(true);
@@ -191,8 +215,6 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (currentRoom && allUsers.length > 0) {
-      // onlineUsers are specifically members of the current room who are "active" based on some logic (not fully implemented here)
-      // For now, let's consider all members of the current room as "online" in its context
       const usersInRoom = allUsers.filter(u => currentRoom.members.includes(u.id) || u.id === user?.id);
       setOnlineUsers(usersInRoom);
 
@@ -236,7 +258,6 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
             setUnreadRoomIds(prevUnread => ({ ...prevUnread, [roomId]: false }));
 
             let updatedLocalRooms = currentLocalRooms;
-            // Auto-join public rooms or DMs if not already a member (DMs are implicitly joined)
             if (user && (!roomToJoin.isPrivate || roomToJoin.id.startsWith('dm_')) && !roomToJoin.members.includes(user.id)) {
                 updatedLocalRooms = currentLocalRooms.map(r =>
                     r.id === roomId ? { ...r, members: [...r.members, user.id] } : r
@@ -270,7 +291,6 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
             }
         }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoadingInitialData, rooms, lastActiveRoomId, currentRoom, joinRoom, setLastActiveRoomId]);
 
 
@@ -314,10 +334,9 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     } else {
       const newDmRoom: Room = {
         id: dmRoomId,
-        name: `DM: ${user.username} & ${otherUser.username}`, // Internal name
+        name: `DM: ${user.username} & ${otherUser.username}`,
         isPrivate: true,
         members: [user.id, otherUserId],
-        // ownerId not strictly necessary for DMs
       };
       let roomsToSync: Room[] | null = null;
       setRooms(prevRooms => {
@@ -398,7 +417,6 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         console.error("Failed to update typing status:", error);
       }
     }, TYPING_DEBOUNCE_TIME);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, setAllUsers]);
 
 
@@ -423,13 +441,94 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [user, addMessage, handleAiCommand, setUserTyping]);
 
+  const searchAllUsers = useCallback(async (query: string) => {
+    if (!user) return;
+    if (!query.trim()) {
+      setSearchedUsers([]);
+      return;
+    }
+    try {
+      const result = await searchUsers({ query, currentUserId: user.id });
+      setSearchedUsers(result.users);
+    } catch (error) {
+      console.error("Error searching users:", error);
+      toast({ title: "Search Error", description: "Could not perform user search.", variant: "destructive" });
+      setSearchedUsers([]);
+    }
+  }, [user, toast]);
+
+  const sendFriendRequest = useCallback(async (recipientId: string): Promise<boolean> => {
+    if (!user) return false;
+    try {
+      const response = await sendFriendRequestFlow({ requesterId: user.id, recipientId });
+      toast({ title: response.success ? "Success" : "Error", description: response.message, variant: response.success ? "default" : "destructive" });
+      if (response.success) {
+        await refreshAllUsers(); // Refresh user data to get updated sent/pending requests
+      }
+      return response.success;
+    } catch (error) {
+      console.error("Error sending friend request:", error);
+      toast({ title: "Error", description: "Could not send friend request.", variant: "destructive" });
+      return false;
+    }
+  }, [user, toast, refreshAllUsers]);
+  
+  const acceptFriendRequest = useCallback(async (requesterId: string): Promise<boolean> => {
+    if (!user) return false;
+    try {
+      const response = await acceptFriendRequestFlow({ recipientId: user.id, requesterId });
+      toast({ title: response.success ? "Success" : "Error", description: response.message, variant: response.success ? "default" : "destructive" });
+      if (response.success) {
+        await refreshAllUsers();
+      }
+      return response.success;
+    } catch (error) {
+      console.error("Error accepting friend request:", error);
+      toast({ title: "Error", description: "Could not accept friend request.", variant: "destructive" });
+      return false;
+    }
+  }, [user, toast, refreshAllUsers]);
+
+  const declineOrCancelFriendRequest = useCallback(async (otherUserId: string): Promise<boolean> => {
+    if (!user) return false;
+    try {
+      const response = await declineOrCancelFriendRequestFlow({ userId: user.id, otherUserId });
+      toast({ title: response.success ? "Success" : "Error", description: response.message, variant: response.success ? "default" : "destructive" });
+      if (response.success) {
+        await refreshAllUsers();
+      }
+      return response.success;
+    } catch (error) {
+      console.error("Error managing friend request:", error);
+      toast({ title: "Error", description: "Could not manage friend request.", variant: "destructive" });
+      return false;
+    }
+  }, [user, toast, refreshAllUsers]);
+
+  const removeFriend = useCallback(async (friendId: string): Promise<boolean> => {
+    if (!user) return false;
+    try {
+      const response = await removeFriendFlow({ userId: user.id, otherUserId: friendId });
+      toast({ title: response.success ? "Success" : "Error", description: response.message, variant: response.success ? "default" : "destructive" });
+      if (response.success) {
+        await refreshAllUsers();
+      }
+      return response.success;
+    } catch (error) {
+      console.error("Error removing friend:", error);
+      toast({ title: "Error", description: "Could not remove friend.", variant: "destructive" });
+      return false;
+    }
+  }, [user, toast, refreshAllUsers]);
+
 
   return (
     <ChatContext.Provider value={{
       rooms,
       messages,
       currentRoom,
-      allUsers, // Expose allUsers
+      allUsers,
+      searchedUsers,
       onlineUsers,
       typingUsers,
       createRoom,
@@ -439,7 +538,13 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       setUserTyping,
       isLoadingAiResponse,
       isLoadingInitialData,
-      unreadRoomIds
+      unreadRoomIds,
+      searchAllUsers,
+      sendFriendRequest,
+      acceptFriendRequest,
+      declineOrCancelFriendRequest,
+      removeFriend,
+      refreshAllUsers,
     }}>
       {children}
     </ChatContext.Provider>
@@ -453,4 +558,3 @@ export const useChat = (): ChatContextType => {
   }
   return context;
 };
-

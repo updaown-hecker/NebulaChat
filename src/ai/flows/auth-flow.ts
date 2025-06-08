@@ -28,7 +28,10 @@ const AuthOutputSchema = z.object({
     id: z.string(),
     username: z.string(),
     isGuest: z.boolean().optional(),
-    isTypingInRoomId: z.string().nullable().optional(), // Added here for consistency, though not primary for auth output
+    isTypingInRoomId: z.string().nullable().optional(),
+    friendIds: z.array(z.string()).optional(),
+    pendingFriendRequestsReceived: z.array(z.string()).optional(),
+    sentFriendRequests: z.array(z.string()).optional(),
   }).nullable(),
   message: z.string().optional(),
 });
@@ -65,7 +68,14 @@ const readUsersFromFile = (): User[] => {
   try {
     const fileContent = fs.readFileSync(USERS_FILE_PATH, 'utf-8');
     if (fileContent.trim() === '') return []; // Handle empty file
-    return JSON.parse(fileContent) as User[];
+    const users = JSON.parse(fileContent) as User[];
+    // Ensure new fields exist
+    return users.map(u => ({
+        ...u,
+        friendIds: u.friendIds || [],
+        pendingFriendRequestsReceived: u.pendingFriendRequestsReceived || [],
+        sentFriendRequests: u.sentFriendRequests || [],
+    }));
   } catch (error) {
     console.error('Error reading users file:', error);
     return [];
@@ -105,7 +115,7 @@ const registerUserFlow = ai.defineFlow(
 
 
     const users = readUsersFromFile();
-    if (users.find(acc => acc.username === username.trim())) {
+    if (users.find(acc => acc.username.toLowerCase() === username.trim().toLowerCase())) {
       return { success: false, user: null, message: 'Username already exists. Please choose a different one.' };
     }
     const newUser: User = {
@@ -114,6 +124,9 @@ const registerUserFlow = ai.defineFlow(
       password, // In a real app, HASH this password securely!
       isGuest: false,
       isTypingInRoomId: null,
+      friendIds: [],
+      pendingFriendRequestsReceived: [],
+      sentFriendRequests: [],
     };
     users.push(newUser);
     writeUsersToFile(users);
@@ -137,11 +150,9 @@ const loginUserFlow = ai.defineFlow(
   async ({ username, password }) => {
     console.log(`Attempting to log in user "${username}" (checking JSON)...`);
     const users = readUsersFromFile();
-    const account = users.find(acc => acc.username === username);
+    const account = users.find(acc => acc.username.toLowerCase() === username.toLowerCase());
 
     if (account) {
-      // For registered users, password must match.
-      // For guest accounts (if they somehow end up in users.json without a password, though they shouldn't via this flow), password check is skipped.
       if ((account.password && account.password === password) || (!account.password && !password && account.isGuest)) {
         const { password: _p, ...userToReturn } = account;
         return { success: true, user: userToReturn, message: 'Login successful.' };

@@ -23,6 +23,9 @@ const UserSchema = z.object({
   isGuest: z.boolean().optional(),
   password: z.string().optional(), // Keep for reading, but don't expose sensitive data
   isTypingInRoomId: z.string().nullable().optional(),
+  friendIds: z.array(z.string()).optional(),
+  pendingFriendRequestsReceived: z.array(z.string()).optional(),
+  sentFriendRequests: z.array(z.string()).optional(),
 });
 
 const RoomSchema = z.object({
@@ -45,8 +48,8 @@ const MessageSchema = z.object({
 
 // Initial default data if JSON files don't exist
 const DEFAULT_MOCK_USERS_SERVER: User[] = [
-    { id: 'user1', username: 'Alice', isTypingInRoomId: null },
-    { id: 'user2', username: 'Bob', isTypingInRoomId: null },
+    { id: 'user1', username: 'Alice', isTypingInRoomId: null, friendIds: [], pendingFriendRequestsReceived: [], sentFriendRequests: [] },
+    { id: 'user2', username: 'Bob', isTypingInRoomId: null, friendIds: [], pendingFriendRequestsReceived: [], sentFriendRequests: [] },
 ];
 
 const DEFAULT_MOCK_ROOMS_SERVER: Room[] = [
@@ -81,31 +84,41 @@ const writeDataToFile = <T>(filePath: string, data: T): void => {
 };
 
 // Generic helper to read data from a JSON file
-const readDataFromFile = <T>(filePath: string, defaultData: T): T => {
+const readDataFromFile = <T>(filePath: string, defaultData: T, ensureFields?: (item: any) => any): T => {
   ensureDataDirExists();
   if (!fs.existsSync(filePath)) {
-    // File doesn't exist, so create it with default data
     writeDataToFile(filePath, defaultData);
     return defaultData;
   }
   try {
     const fileContent = fs.readFileSync(filePath, 'utf-8');
-    // If file is empty or only whitespace, it's not valid JSON.
     if (fileContent.trim() === '') {
-      console.warn(`File ${filePath} is empty or contains only whitespace. Returning default data. The file will NOT be overwritten with defaults at this stage.`);
+      console.warn(`File ${filePath} is empty. Returning default data. The file will NOT be overwritten with defaults.`);
       return defaultData;
     }
-    return JSON.parse(fileContent) as T;
+    let jsonData = JSON.parse(fileContent) as T;
+    if (Array.isArray(jsonData) && ensureFields) {
+      jsonData = jsonData.map(ensureFields) as unknown as T;
+    } else if (ensureFields && typeof jsonData === 'object' && jsonData !== null) {
+      jsonData = ensureFields(jsonData);
+    }
+    return jsonData;
   } catch (error) {
-    // Catch JSON.parse errors for non-empty but malformed files
     console.error(`Error parsing JSON from file ${filePath}:`, error);
-    // Log a preview of the file content for easier debugging without printing potentially huge files.
     const fileContentForDebug = fs.readFileSync(filePath, 'utf-8');
     console.warn(`Content preview (up to 500 chars): ${fileContentForDebug.substring(0,500)}...`);
-    console.warn(`Returning default data for ${filePath} due to parsing error. The original file has NOT been overwritten with defaults by this read operation.`);
+    console.warn(`Returning default data for ${filePath} due to parsing error. The original file has NOT been overwritten.`);
     return defaultData;
   }
 };
+
+const ensureUserFields = (user: User): User => ({
+  ...user,
+  friendIds: user.friendIds || [],
+  pendingFriendRequestsReceived: user.pendingFriendRequestsReceived || [],
+  sentFriendRequests: user.sentFriendRequests || [],
+  isTypingInRoomId: user.isTypingInRoomId === undefined ? null : user.isTypingInRoomId,
+});
 
 
 const FetchChatDataOutputSchema = z.object({
@@ -128,9 +141,8 @@ const fetchChatDataFlow = ai.defineFlow(
     console.log('Fetching initial chat data (rooms, messages, users) from JSON files...');
     const rooms = readDataFromFile<Room[]>(ROOMS_FILE_PATH, DEFAULT_MOCK_ROOMS_SERVER);
     const messages = readDataFromFile<Message[]>(MESSAGES_FILE_PATH, DEFAULT_MOCK_MESSAGES_SERVER);
-    const allUsersFull = readDataFromFile<User[]>(USERS_FILE_PATH, DEFAULT_MOCK_USERS_SERVER);
+    const allUsersFull = readDataFromFile<User[]>(USERS_FILE_PATH, DEFAULT_MOCK_USERS_SERVER, ensureUserFields);
     
-    // Omit password before sending to client
     const users = allUsersFull.map(({ password, ...userWithoutPassword }) => userWithoutPassword);
 
     return {
@@ -191,4 +203,3 @@ const syncMessagesToServerFlow = ai.defineFlow(
     return { success: true, message: "Messages synced to JSON file." };
   }
 );
-

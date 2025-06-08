@@ -6,6 +6,9 @@ export interface User {
   isGuest?: boolean;
   password?: string; // For local "account" simulation
   isTypingInRoomId?: string | null; // ID of the room the user is currently typing in
+  friendIds?: string[];
+  pendingFriendRequestsReceived?: string[]; // User IDs who sent a request to this user
+  sentFriendRequests?: string[]; // User IDs to whom this user sent a request
 }
 
 export interface Room {
