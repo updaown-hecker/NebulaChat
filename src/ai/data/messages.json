@@ -256,26 +256,6 @@
     "isEdited": false
   },
   {
-    "id": "msg-1749349727939-5og8t",
-    "roomId": "general",
-    "userId": "user-1749333571329",
-    "username": "updaown",
-    "content": "hiii",
-    "timestamp": 1749349727939,
-    "isEdited": false
-  },
-  {
-    "id": "msg-1749349737306-k8fkz",
-    "roomId": "general",
-    "userId": "user-1749333571329",
-    "username": "updaown",
-    "content": "hola",
-    "timestamp": 1749349737306,
-    "replyToMessageId": "msg-1749346122664-hlcoe",
-    "replyToUsername": "Ben",
-    "isEdited": false
-  },
-  {
     "id": "msg-1749349804818-q28d9",
     "roomId": "dm_user-1749333571329_user1",
     "userId": "user-1749333571329",

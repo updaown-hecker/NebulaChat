@@ -42,3 +42,16 @@ export interface Settings {
   fontSize: FontSize;
 }
 
+export interface Notification {
+  id: string;
+  userId: string; // The ID of the user who should receive this notification
+  type: 'friend_request_received' | 'room_invite' | 'generic';
+  message: string; // The content of the notification
+  link?: string; // Optional link for navigation (e.g., to friends page or a room)
+  timestamp: number;
+  isRead: boolean;
+  actorId?: string; // User ID of the person who triggered the notification (e.g. who sent friend request)
+  actorUsername?: string; // Username of the actor
+  roomId?: string; // Relevant room ID, e.g. for room invites
+  roomName?: string; // Relevant room name
+}

@@ -8,4 +8,4 @@ import '@/ai/flows/chat-data-flow.ts';
 import '@/ai/flows/auth-flow.ts'; // Includes user auth and typing status updates
 import '@/ai/flows/friend-flow.ts'; // Includes friend management flows
 import '@/ai/flows/room-management-flow.ts'; // Includes room invitation flow
-
+import '@/ai/flows/notification-flow.ts'; // Includes notification management

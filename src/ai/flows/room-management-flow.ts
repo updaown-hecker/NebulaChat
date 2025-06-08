@@ -7,9 +7,11 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import type { Room } from '@/types';
+import type { Room, User } from '@/types';
 import fs from 'fs';
 import path from 'path';
+import { createNotification } from './notification-flow'; // Import createNotification
+import { readUsersFromFile as readAllUsers } from './friend-flow'; // To get inviter username
 
 const DATA_DIR = path.join(process.cwd(), 'src', 'ai', 'data');
 const ROOMS_FILE_PATH = path.join(DATA_DIR, 'rooms.json');
@@ -94,9 +96,12 @@ const inviteUserToRoomFlow = ai.defineFlow(
     if (!room.isPrivate) {
       return { success: false, message: "This room is public. Users can join directly." };
     }
+    
+    const allUsers = await readAllUsers(); // Fetch all users to get inviter's username
+    const inviter = allUsers.find(u => u.id === inviterUserId);
 
-    if (room.ownerId !== inviterUserId) {
-      return { success: false, message: "You are not the owner of this room and cannot invite users." };
+    if (room.ownerId !== inviterUserId && !(inviter && inviter.isAdmin)) {
+      return { success: false, message: "You are not the owner or an admin, and cannot invite users to this private room." };
     }
 
     if (room.members.includes(inviteeUserId)) {
@@ -107,6 +112,19 @@ const inviteUserToRoomFlow = ai.defineFlow(
     rooms[roomIndex] = room;
     writeRoomsToFile(rooms);
 
+    // Create notification for the invitee
+    await createNotification({
+      userId: inviteeUserId,
+      type: 'room_invite',
+      message: `${inviter?.username || 'Someone'} invited you to the private room: "${room.name}".`,
+      link: `/chat?roomId=${roomId}`, // Link to join the room
+      actorId: inviterUserId,
+      actorUsername: inviter?.username,
+      roomId: room.id,
+      roomName: room.name,
+    });
+
     return { success: true, message: "User invited successfully.", updatedRoom: room };
   }
 );
+

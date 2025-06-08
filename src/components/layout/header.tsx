@@ -9,6 +9,7 @@ import { SettingsPanel } from '@/components/settings/settings-panel';
 import { Button } from '@/components/ui/button';
 import { SidebarTrigger } from '@/components/ui/sidebar'; // For mobile nav toggle
 import { PanelRightClose, PanelRightOpen } from 'lucide-react';
+import { NotificationBell } from '@/components/notifications/notification-bell'; // Added
 import { cn } from '@/lib/utils';
 
 interface HeaderProps {
@@ -26,7 +27,8 @@ export function Header({ isDesktopRightSidebarOpen, toggleDesktopRightSidebar }:
         <NebulaChatLogo className="h-7 w-7 text-primary" />
         <h1 className="text-xl font-semibold font-headline">NebulaChat</h1>
       </Link>
-      <div className="flex items-center gap-2"> {/* Reduced gap from 4 to 2 to accommodate new icon */}
+      <div className="flex items-center gap-1"> {/* Reduced gap to accommodate bell */}
+        <NotificationBell />
         <SettingsPanel />
         {toggleDesktopRightSidebar && (
           <Button 

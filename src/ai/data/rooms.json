@@ -7,7 +7,8 @@
       "user2",
       "user-1749336395407",
       "user-1749334881349",
-      "user-1749343151620-twocj"
+      "user-1749343151620-twocj",
+      "user-1749333571329"
     ],
     "ownerId": "user2"
   },
@@ -36,6 +37,16 @@
       "user-1749333571329"
     ],
     "ownerId": "user1"
+  },
+  {
+    "id": "room-1749349989613-p3zjr",
+    "name": "nuh uh",
+    "isPrivate": true,
+    "members": [
+      "user-1749333571329",
+      "user1"
+    ],
+    "ownerId": "user-1749333571329"
   },
   {
     "id": "random",
