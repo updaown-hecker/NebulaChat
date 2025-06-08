@@ -206,5 +206,13 @@
     "username": "Ben",
     "content": "Hiii",
     "timestamp": 1749343176043
+  },
+  {
+    "id": "msg-1749343670593-kms92",
+    "roomId": "general",
+    "userId": "user1",
+    "username": "admin",
+    "content": "Hi",
+    "timestamp": 1749343670593
   }
 ]

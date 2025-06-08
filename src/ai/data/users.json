@@ -1,10 +1,9 @@
-
 [
   {
     "id": "user1",
     "username": "admin",
     "password": "admin123",
-    "isTypingInRoomId": null,
+    "isTypingInRoomId": "general",
     "friendIds": [],
     "pendingFriendRequestsReceived": [],
     "sentFriendRequests": [],
@@ -42,4 +41,3 @@
     "isAdmin": false
   }
 ]
-

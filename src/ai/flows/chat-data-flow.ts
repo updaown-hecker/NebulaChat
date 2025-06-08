@@ -26,7 +26,7 @@ const UserSchema = z.object({
   friendIds: z.array(z.string()).optional(),
   pendingFriendRequestsReceived: z.array(z.string()).optional(),
   sentFriendRequests: z.array(z.string()).optional(),
-  isAdmin: z.boolean().optional(), // Added isAdmin
+  isAdmin: z.boolean().optional(),
 });
 
 const RoomSchema = z.object({
@@ -45,11 +45,13 @@ const MessageSchema = z.object({
   content: z.string(),
   timestamp: z.number(),
   isAIMessage: z.boolean().optional(),
+  isEdited: z.boolean().optional(), // Added
+  editedTimestamp: z.number().optional(), // Added
 });
 
 // Initial default data if JSON files don't exist
 const DEFAULT_MOCK_USERS_SERVER: User[] = [
-    { id: 'user1', username: 'Alice', isTypingInRoomId: null, friendIds: [], pendingFriendRequestsReceived: [], sentFriendRequests: [], isAdmin: true },
+    { id: 'user1', username: 'admin', password: 'admin123', isTypingInRoomId: null, friendIds: [], pendingFriendRequestsReceived: [], sentFriendRequests: [], isAdmin: true },
     { id: 'user2', username: 'Bob', isTypingInRoomId: null, friendIds: [], pendingFriendRequestsReceived: [], sentFriendRequests: [], isAdmin: false },
 ];
 
@@ -94,8 +96,6 @@ const readDataFromFile = <T>(filePath: string, defaultData: T, ensureFields?: (i
   try {
     const fileContent = fs.readFileSync(filePath, 'utf-8');
     if (fileContent.trim() === '') {
-      // If file is empty, return default data but DO NOT overwrite the empty file.
-      // This prevents accidental data loss if the file is cleared.
       console.warn(`File ${filePath} is empty. Returning default data. The file will NOT be overwritten with defaults.`);
       return defaultData;
     }
@@ -110,7 +110,6 @@ const readDataFromFile = <T>(filePath: string, defaultData: T, ensureFields?: (i
     console.error(`Error parsing JSON from file ${filePath}:`, error);
     const fileContentForDebug = fs.readFileSync(filePath, 'utf-8');
     console.warn(`Content preview (up to 500 chars): ${fileContentForDebug.substring(0,500)}...`);
-    // If parsing fails, return default data but DO NOT overwrite the problematic file.
     console.warn(`Returning default data for ${filePath} due to parsing error. The original file has NOT been overwritten.`);
     return defaultData;
   }
@@ -122,14 +121,20 @@ const ensureUserFields = (user: User): User => ({
   pendingFriendRequestsReceived: user.pendingFriendRequestsReceived || [],
   sentFriendRequests: user.sentFriendRequests || [],
   isTypingInRoomId: user.isTypingInRoomId === undefined ? null : user.isTypingInRoomId,
-  isAdmin: user.isAdmin || false, // Ensure isAdmin defaults to false
+  isAdmin: user.isAdmin || false,
+});
+
+const ensureMessageFields = (message: Message): Message => ({
+    ...message,
+    isEdited: message.isEdited || false,
+    editedTimestamp: message.editedTimestamp || undefined,
 });
 
 
 const FetchChatDataOutputSchema = z.object({
   rooms: z.array(RoomSchema),
   messages: z.array(MessageSchema),
-  users: z.array(UserSchema.omit({ password: true })), // Omit password when sending to client
+  users: z.array(UserSchema.omit({ password: true })),
 });
 export type FetchChatDataOutput = z.infer<typeof FetchChatDataOutputSchema>;
 
@@ -145,7 +150,7 @@ const fetchChatDataFlow = ai.defineFlow(
   async () => {
     console.log('Fetching initial chat data (rooms, messages, users) from JSON files...');
     const rooms = readDataFromFile<Room[]>(ROOMS_FILE_PATH, DEFAULT_MOCK_ROOMS_SERVER);
-    const messages = readDataFromFile<Message[]>(MESSAGES_FILE_PATH, DEFAULT_MOCK_MESSAGES_SERVER);
+    const messages = readDataFromFile<Message[]>(MESSAGES_FILE_PATH, DEFAULT_MOCK_MESSAGES_SERVER, ensureMessageFields);
     const allUsersFull = readDataFromFile<User[]>(USERS_FILE_PATH, DEFAULT_MOCK_USERS_SERVER, ensureUserFields);
     
     const users = allUsersFull.map(({ password, ...userWithoutPassword }) => userWithoutPassword);

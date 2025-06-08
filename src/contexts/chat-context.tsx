@@ -9,7 +9,7 @@ import { aiTutorialCommand } from '@/ai/flows/ai-tutorial-command';
 import { fetchChatData, syncRoomsToServer, syncMessagesToServer } from '@/ai/flows/chat-data-flow';
 import { updateUserTypingStatus } from '@/ai/flows/auth-flow';
 import { searchUsers, sendFriendRequest as sendFriendRequestFlow, acceptFriendRequest as acceptFriendRequestFlow, declineOrCancelFriendRequest as declineOrCancelFriendRequestFlow, removeFriend as removeFriendFlow } from '@/ai/flows/friend-flow';
-import { inviteUserToRoom as inviteUserToRoomFlow } from '@/ai/flows/room-management-flow'; // Added
+import { inviteUserToRoom as inviteUserToRoomFlow } from '@/ai/flows/room-management-flow';
 import useLocalStorage from '@/hooks/use-local-storage';
 import {
   LOCAL_STORAGE_MESSAGES_KEY,
@@ -31,6 +31,8 @@ interface ChatContextType {
   joinRoom: (roomId: string) => void;
   startDirectMessage: (otherUserId: string) => Promise<void>;
   sendMessage: (content: string) => Promise<void>;
+  editMessage: (messageId: string, newContent: string) => Promise<boolean>;
+  deleteMessage: (messageId: string) => Promise<boolean>;
   setUserTyping: (isTyping: boolean) => void;
   isLoadingAiResponse: boolean;
   isLoadingInitialData: boolean;
@@ -41,7 +43,7 @@ interface ChatContextType {
   declineOrCancelFriendRequest: (otherUserId: string) => Promise<boolean>;
   removeFriend: (friendId: string) => Promise<boolean>;
   refreshAllUsers: () => Promise<void>;
-  inviteUserToRoom: (roomId: string, inviteeUserId: string) => Promise<boolean>; // Added
+  inviteUserToRoom: (roomId: string, inviteeUserId: string) => Promise<boolean>;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -82,25 +84,23 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastSentTypingStatusRef = useRef<boolean>(false);
 
-  const refreshAllData = useCallback(async (showToast = false) => { // Combined refresh logic
+  const refreshAllData = useCallback(async (showToast = false) => {
     try {
       const serverData = await fetchChatData();
       if (serverData) {
         if (serverData.users) setAllUsers(serverData.users);
         if (serverData.rooms) {
-            setRooms(serverData.rooms); // Potentially smarter merge later
-             // After rooms are set, if currentRoom exists, ensure it's the latest version
+            setRooms(serverData.rooms);
             if (currentRoomRef.current) {
                 const updatedCurrentRoom = serverData.rooms.find(r => r.id === currentRoomRef.current!.id);
                 if (updatedCurrentRoom) {
                     setCurrentRoom(updatedCurrentRoom);
                 } else {
-                    // Current room no longer exists, clear it or pick another
                     setCurrentRoom(serverData.rooms.length > 0 ? serverData.rooms[0] : null);
                 }
             }
         }
-        if (serverData.messages) setMessages(serverData.messages); // Potentially smarter merge later
+        if (serverData.messages) setMessages(serverData.messages);
       }
       if (showToast) {
         toast({ title: "Data Synced", description: "Chat data has been refreshed." });
@@ -114,7 +114,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   }, [setAllUsers, setRooms, setMessages, toast]);
 
 
-  const refreshAllUsers = useCallback(async () => { // Kept separate if only users need refresh sometimes
+  const refreshAllUsers = useCallback(async () => {
     try {
       const serverData = await fetchChatData();
       if (serverData && serverData.users) {
@@ -335,7 +335,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       id: `room-${Date.now()}-${Math.random().toString(36).substring(2,7)}`,
       name,
       isPrivate,
-      members: [user.id], // Owner is a member by default
+      members: [user.id], 
       ownerId: user.id,
     };
     let roomsToSync: Room[] | null = null;
@@ -369,10 +369,10 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     } else {
       const newDmRoom: Room = {
         id: dmRoomId,
-        name: `DM: ${user.username} & ${otherUser.username}`, // Internal name
+        name: `DM: ${user.username} & ${otherUser.username}`, 
         isPrivate: true,
         members: [user.id, otherUserId],
-        ownerId: user.id, // DMs can conceptually have the initiator as owner for consistency
+        ownerId: user.id, 
       };
       let roomsToSync: Room[] | null = null;
       setRooms(prevRooms => {
@@ -477,6 +477,64 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [user, addMessage, handleAiCommand, setUserTyping]);
 
+  const editMessage = useCallback(async (messageId: string, newContent: string): Promise<boolean> => {
+    if (!user) return false;
+    const messageIndex = messages.findIndex(m => m.id === messageId);
+    if (messageIndex === -1) return false;
+
+    const messageToEdit = messages[messageIndex];
+    if (messageToEdit.userId !== user.id && !user.isAdmin) {
+      toast({ title: "Permission Denied", description: "You can only edit your own messages.", variant: "destructive" });
+      return false;
+    }
+
+    const updatedMessage = {
+      ...messageToEdit,
+      content: newContent,
+      isEdited: true,
+      editedTimestamp: Date.now(),
+    };
+    
+    let messagesToSync: Message[] | null = null;
+    setMessages(prevMessages => {
+        const newMessages = [...prevMessages];
+        newMessages[messageIndex] = updatedMessage;
+        messagesToSync = newMessages;
+        return newMessages;
+    });
+
+    if (messagesToSync) {
+      await syncMessagesToServer({ messages: messagesToSync });
+    }
+    toast({ title: "Message Edited", description: "Your message has been updated." });
+    return true;
+  }, [user, messages, setMessages, toast]);
+
+  const deleteMessage = useCallback(async (messageId: string): Promise<boolean> => {
+    if (!user) return false;
+    const messageToDelete = messages.find(m => m.id === messageId);
+    if (!messageToDelete) return false;
+
+    if (messageToDelete.userId !== user.id && !user.isAdmin) {
+      toast({ title: "Permission Denied", description: "You can only delete your own messages.", variant: "destructive" });
+      return false;
+    }
+    
+    let messagesToSync: Message[] | null = null;
+    setMessages(prevMessages => {
+        const filteredMessages = prevMessages.filter(m => m.id !== messageId);
+        messagesToSync = filteredMessages;
+        return filteredMessages;
+    });
+    
+    if (messagesToSync) {
+      await syncMessagesToServer({ messages: messagesToSync });
+    }
+    toast({ title: "Message Deleted", description: "The message has been removed." });
+    return true;
+  }, [user, messages, setMessages, toast]);
+
+
   const searchAllUsers = useCallback(async (query: string) => {
     if (!user) return;
     if (!query.trim()) {
@@ -563,7 +621,6 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       const response = await inviteUserToRoomFlow({ roomId, inviterUserId: user.id, inviteeUserId });
       toast({ title: response.success ? "Success" : "Error", description: response.message, variant: response.success ? "default" : "destructive" });
       if (response.success && response.updatedRoom) {
-        // Refresh all rooms or update just the specific one
         setRooms(prevRooms => prevRooms.map(r => r.id === roomId ? response.updatedRoom! : r));
         if (currentRoomRef.current && currentRoomRef.current.id === roomId) {
             setCurrentRoom(response.updatedRoom);
@@ -591,6 +648,8 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       joinRoom,
       startDirectMessage,
       sendMessage,
+      editMessage,
+      deleteMessage,
       setUserTyping,
       isLoadingAiResponse,
       isLoadingInitialData,
@@ -601,7 +660,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       declineOrCancelFriendRequest,
       removeFriend,
       refreshAllUsers,
-      inviteUserToRoom, // Added
+      inviteUserToRoom,
     }}>
       {children}
     </ChatContext.Provider>

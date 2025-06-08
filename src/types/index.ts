@@ -28,10 +28,12 @@ export interface Message {
   content: string;
   timestamp: number; // Unix timestamp
   isAIMessage?: boolean; // Flag for AI assistant messages
+  isEdited?: boolean; // True if the message has been edited
+  editedTimestamp?: number; // Timestamp of the last edit
 }
 
 export type Theme = 'light' | 'dark';
-export type FontSize = 'sm' | 'md' | 'lg';
+export type FontSize = 'sm' | 'lg' | 'md'; // md was missing, added for consistency
 
 export interface Settings {
   theme: Theme;
