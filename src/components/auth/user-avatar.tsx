@@ -1,3 +1,4 @@
+
 "use client";
 
 import React from 'react';
@@ -12,9 +13,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { LogOut, User as UserIcon, Settings as SettingsIcon } from 'lucide-react';
+import { LogOut, User as UserIcon, Settings as SettingsIcon, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { cn } from '@/lib/utils';
 
 export function UserAvatar() {
   const { user, logout } = useAuth();
@@ -40,10 +42,10 @@ export function UserAvatar() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-          <Avatar className="h-10 w-10 border-2 border-primary/50 hover:border-primary transition-colors">
+          <Avatar className={cn("h-10 w-10 border-2 border-primary/50 hover:border-primary transition-colors", user.isAdmin && "border-amber-500 hover:border-amber-400")}>
             {user.avatar && <AvatarImage src={user.avatar} alt={user.username} />}
-            <AvatarFallback className="bg-muted text-muted-foreground font-semibold">
-              {getInitials(user.username)}
+            <AvatarFallback className={cn("bg-muted text-muted-foreground font-semibold", user.isAdmin && "bg-amber-500/20 text-amber-600")}>
+              {user.isAdmin ? <ShieldCheck size={20} /> : getInitials(user.username)}
             </AvatarFallback>
           </Avatar>
         </Button>
@@ -53,11 +55,17 @@ export function UserAvatar() {
           <div className="flex flex-col space-y-1">
             <p className="text-sm font-medium leading-none">{user.username}</p>
             <p className="text-xs leading-none text-muted-foreground">
-              {user.isGuest ? 'Guest Account' : 'Member'}
+              {user.isGuest ? 'Guest Account' : (user.isAdmin ? 'Administrator' : 'Member')}
             </p>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        {user.isAdmin && (
+          <DropdownMenuItem>
+            <ShieldCheck className="mr-2 h-4 w-4 text-amber-500" />
+            <span>Admin Panel (coming soon)</span>
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem asChild>
           <Link href="/settings">
             <SettingsIcon className="mr-2 h-4 w-4" />

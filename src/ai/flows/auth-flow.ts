@@ -22,9 +22,7 @@ const AuthInputSchema = z.object({
 });
 export type AuthInput = z.infer<typeof AuthInputSchema>;
 
-const AuthOutputSchema = z.object({
-  success: z.boolean(),
-  user: z.object({
+const UserAuthOutputSchema = z.object({ // Renamed for clarity
     id: z.string(),
     username: z.string(),
     isGuest: z.boolean().optional(),
@@ -32,7 +30,12 @@ const AuthOutputSchema = z.object({
     friendIds: z.array(z.string()).optional(),
     pendingFriendRequestsReceived: z.array(z.string()).optional(),
     sentFriendRequests: z.array(z.string()).optional(),
-  }).nullable(),
+    isAdmin: z.boolean().optional(), // Added isAdmin
+});
+
+const AuthOutputSchema = z.object({
+  success: z.boolean(),
+  user: UserAuthOutputSchema.nullable(),
   message: z.string().optional(),
 });
 export type AuthOutput = z.infer<typeof AuthOutputSchema>;
@@ -77,6 +80,7 @@ const readUsersFromFile = (): User[] => {
         friendIds: u.friendIds || [],
         pendingFriendRequestsReceived: u.pendingFriendRequestsReceived || [],
         sentFriendRequests: u.sentFriendRequests || [],
+        isAdmin: u.isAdmin || false, // Default isAdmin to false
     }));
   } catch (error) {
     console.error('Error reading users file:', error);
@@ -125,10 +129,11 @@ const registerUserFlow = ai.defineFlow(
       username: username.trim(),
       password, // In a real app, HASH this password securely!
       isGuest: false,
-      isTypingInRoomId: null, // Ensure this is null on registration
+      isTypingInRoomId: null,
       friendIds: [],
       pendingFriendRequestsReceived: [],
       sentFriendRequests: [],
+      isAdmin: false, // New users are not admins by default
     };
     users.push(newUser);
     writeUsersToFile(users);
@@ -159,6 +164,8 @@ const loginUserFlow = ai.defineFlow(
       if ((account.password && account.password === password) || (!account.password && !password && account.isGuest)) {
         // Reset typing status on login
         users[accountIndex].isTypingInRoomId = null;
+        // Ensure isAdmin defaults if somehow missing (though readUsersFromFile should handle it)
+        users[accountIndex].isAdmin = users[accountIndex].isAdmin || false;
         writeUsersToFile(users);
         
         // Return user data without password, but with updated typing status

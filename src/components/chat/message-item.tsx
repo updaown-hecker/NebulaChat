@@ -1,12 +1,15 @@
+
 "use client";
 
 import React from 'react';
-import type { Message } from '@/types';
+import type { Message, User } from '@/types';
 import { useAuth } from '@/contexts/auth-context';
+import { useChat } from '@/contexts/chat-context'; // To get allUsers
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge'; // For Admin badge
 import { formatDistanceToNow } from 'date-fns';
-import { Bot } from 'lucide-react';
+import { Bot, ShieldCheck } from 'lucide-react'; // ShieldCheck for Admin
 
 interface MessageItemProps {
   message: Message;
@@ -14,8 +17,13 @@ interface MessageItemProps {
 
 export function MessageItem({ message }: MessageItemProps) {
   const { user: currentUser } = useAuth();
+  const { allUsers } = useChat(); // Get all users to check admin status
+
   const isCurrentUser = message.userId === currentUser?.id;
   const isAIMessage = message.isAIMessage;
+
+  const sender = allUsers.find(u => u.id === message.userId);
+  const senderIsAdmin = sender?.isAdmin;
 
   const getInitials = (name: string) => {
     return name
@@ -37,7 +45,7 @@ export function MessageItem({ message }: MessageItemProps) {
       {!isCurrentUser && (
         <Avatar className="h-8 w-8 border">
           {/* Placeholder for avatar image */}
-          {/* <AvatarImage src={message.userAvatar} alt={message.username} /> */}
+          {/* <AvatarImage src={sender?.avatar} alt={message.username} /> */}
           <AvatarFallback className={cn(
             "text-xs",
             isAIMessage ? "bg-primary text-primary-foreground" : "bg-muted"
@@ -56,9 +64,16 @@ export function MessageItem({ message }: MessageItemProps) {
         )}
       >
         {!isCurrentUser && (
-          <p className="text-xs font-semibold mb-1 opacity-80">
-            {message.username}
-          </p>
+          <div className="flex items-center gap-2 mb-1">
+            <p className="text-xs font-semibold opacity-80">
+              {message.username}
+            </p>
+            {senderIsAdmin && !isAIMessage && (
+              <Badge variant="secondary" className="px-1.5 py-0.5 text-xs h-fit">
+                <ShieldCheck className="mr-1 h-3 w-3 text-primary" /> Admin
+              </Badge>
+            )}
+          </div>
         )}
         <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
         <p className={cn(

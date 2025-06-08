@@ -1,3 +1,4 @@
+
 [
   {
     "id": "user1",
@@ -5,7 +6,8 @@
     "isTypingInRoomId": null,
     "friendIds": [],
     "pendingFriendRequestsReceived": [],
-    "sentFriendRequests": []
+    "sentFriendRequests": [],
+    "isAdmin": true
   },
   {
     "id": "user2",
@@ -13,7 +15,8 @@
     "isTypingInRoomId": null,
     "friendIds": [],
     "pendingFriendRequestsReceived": [],
-    "sentFriendRequests": []
+    "sentFriendRequests": [],
+    "isAdmin": false
   },
   {
     "id": "user-1749337377092-9f2f7",
@@ -23,6 +26,18 @@
     "isTypingInRoomId": null,
     "friendIds": [],
     "pendingFriendRequestsReceived": [],
-    "sentFriendRequests": []
+    "sentFriendRequests": [],
+    "isAdmin": false
+  },
+  {
+    "id": "user-1749343151620-twocj",
+    "username": "Ben",
+    "password": "2",
+    "isGuest": false,
+    "isTypingInRoomId": null,
+    "friendIds": [],
+    "pendingFriendRequestsReceived": [],
+    "sentFriendRequests": [],
+    "isAdmin": false
   }
 ]

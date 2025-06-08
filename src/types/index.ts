@@ -9,6 +9,7 @@ export interface User {
   friendIds?: string[];
   pendingFriendRequestsReceived?: string[]; // User IDs who sent a request to this user
   sentFriendRequests?: string[]; // User IDs to whom this user sent a request
+  isAdmin?: boolean; // New field for admin status
 }
 
 export interface Room {

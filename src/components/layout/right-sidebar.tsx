@@ -9,10 +9,11 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Users, Info, Edit3, MessageSquare, UserPlus, CheckCircle, XCircle, UserMinus, Hourglass, Search, UserPlusIcon } from 'lucide-react';
+import { Users, Info, Edit3, MessageSquare, UserPlus, CheckCircle, XCircle, UserMinus, Hourglass, Search, UserPlusIcon, ShieldCheck } from 'lucide-react';
 import type { User } from '@/types';
 import { Separator } from '../ui/separator';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 export function RightSidebar() {
   const { 
@@ -26,7 +27,7 @@ export function RightSidebar() {
     acceptFriendRequest,
     declineOrCancelFriendRequest,
     removeFriend,
-    inviteUserToRoom, // Added
+    inviteUserToRoom,
   } = useChat();
   const { user: currentUser } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
@@ -49,6 +50,13 @@ export function RightSidebar() {
   };
 
   const handleInviteUserToRoom = async (roomId: string, inviteeUserId: string, inviteeUsername: string) => {
+    if (!currentUser || !currentUser.isAdmin) { // Simple check, could be more robust
+        const room = currentRoom; // Assuming currentRoom is the one to invite to
+        if (room && room.ownerId !== currentUser.id) {
+            toast({ title: "Permission Denied", description: "Only room owners can invite users to private rooms.", variant: "destructive"});
+            return;
+        }
+    }
     const success = await inviteUserToRoom(roomId, inviteeUserId);
     if (success) {
       toast({ title: "User Invited", description: `${inviteeUsername} has been invited to the room.`});
@@ -95,7 +103,7 @@ export function RightSidebar() {
     }
     
     // Invite to private room button
-    if (currentRoom && currentRoom.isPrivate && currentRoom.ownerId === currentUser.id && !currentRoom.members.includes(targetUser.id)) {
+    if (currentRoom && currentRoom.isPrivate && (currentRoom.ownerId === currentUser.id || currentUser.isAdmin) && !currentRoom.members.includes(targetUser.id)) {
       actionButtons.push(
         <Button 
           key="invite" 
@@ -136,8 +144,10 @@ export function RightSidebar() {
                 }</p>
                 <p><span className="font-medium">Type:</span> {currentRoom.isPrivate ? (currentRoom.id.startsWith('dm_') ? "Direct Message" : "Private Group") : "Public Group"}</p>
                 <p><span className="font-medium">Members:</span> {currentRoom.members.length}</p>
-                 {currentRoom.isPrivate && currentRoom.ownerId === currentUser?.id && (
-                   <p className="text-xs text-muted-foreground">You are the owner of this private room.</p>
+                 {(currentRoom.isPrivate && currentRoom.ownerId === currentUser?.id || currentUser?.isAdmin) && (
+                   <p className="text-xs text-muted-foreground">
+                    {currentUser?.isAdmin && currentRoom.ownerId !== currentUser.id ? "You have admin access to this room." : "You are the owner of this private room."}
+                   </p>
                  )}
               </div>
             </div>
@@ -163,11 +173,16 @@ export function RightSidebar() {
                 <li key={userItem.id} className="flex items-center gap-2 p-1.5 rounded-md hover:bg-muted transition-colors group">
                   <Avatar className="h-7 w-7 text-xs">
                     {userItem.avatar && <AvatarImage src={userItem.avatar} alt={userItem.username} />}
-                    <AvatarFallback className="bg-secondary text-secondary-foreground">
+                    <AvatarFallback className={cn("bg-secondary text-secondary-foreground", userItem.isAdmin && "border-2 border-primary")}>
                       {getInitials(userItem.username)}
                     </AvatarFallback>
                   </Avatar>
                   <span className="text-sm truncate flex-1">{userItem.username}</span>
+                  {userItem.isAdmin && (
+                    <Badge variant="outline" className="px-1.5 py-0.5 text-xs h-fit border-primary text-primary">
+                        <ShieldCheck className="mr-1 h-3 w-3" /> Admin
+                    </Badge>
+                  )}
                   {typingUsers.find(tu => tu.id === userItem.id && tu.isTypingInRoomId === currentRoom?.id) && (
                     <Edit3 size={14} className="text-primary animate-pulse" title={`${userItem.username} is typing...`} />
                   )}
@@ -205,11 +220,16 @@ export function RightSidebar() {
               {pendingRequests.map((userItem: User) => (
                 <li key={userItem.id} className="flex items-center gap-2 p-1.5 rounded-md hover:bg-muted transition-colors group">
                   <Avatar className="h-7 w-7 text-xs">
-                    <AvatarFallback className="bg-secondary text-secondary-foreground">
+                    <AvatarFallback className={cn("bg-secondary text-secondary-foreground", userItem.isAdmin && "border-2 border-primary")}>
                       {getInitials(userItem.username)}
                     </AvatarFallback>
                   </Avatar>
                   <span className="text-sm truncate flex-1">{userItem.username}</span>
+                   {userItem.isAdmin && (
+                    <Badge variant="outline" className="px-1.5 py-0.5 text-xs h-fit border-primary text-primary">
+                        <ShieldCheck className="mr-1 h-3 w-3" /> Admin
+                    </Badge>
+                  )}
                   <div className="flex items-center space-x-1 ml-auto">
                     {renderUserActions(userItem)}
                   </div>
@@ -230,11 +250,16 @@ export function RightSidebar() {
                 {friends.map((friend: User) => (
                   <li key={friend.id} className="flex items-center gap-2 p-1.5 rounded-md hover:bg-muted transition-colors group">
                     <Avatar className="h-7 w-7 text-xs">
-                      <AvatarFallback className="bg-secondary text-secondary-foreground">
+                      <AvatarFallback className={cn("bg-secondary text-secondary-foreground", friend.isAdmin && "border-2 border-primary")}>
                         {getInitials(friend.username)}
                       </AvatarFallback>
                     </Avatar>
                     <span className="text-sm truncate flex-1">{friend.username}</span>
+                     {friend.isAdmin && (
+                        <Badge variant="outline" className="px-1.5 py-0.5 text-xs h-fit border-primary text-primary">
+                            <ShieldCheck className="mr-1 h-3 w-3" /> Admin
+                        </Badge>
+                    )}
                     <div className="flex items-center space-x-1 ml-auto opacity-0 group-hover:opacity-100 focus-within:opacity-100">
                         {renderUserActions(friend)}
                          <Button

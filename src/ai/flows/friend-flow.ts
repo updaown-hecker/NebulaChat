@@ -36,6 +36,7 @@ const readUsersFromFile = (): User[] => {
         friendIds: u.friendIds || [],
         pendingFriendRequestsReceived: u.pendingFriendRequestsReceived || [],
         sentFriendRequests: u.sentFriendRequests || [],
+        isAdmin: u.isAdmin || false, // Ensure isAdmin defaults to false
     }));
   } catch (error) {
     console.error('Error reading users file in friend-flow:', error);
@@ -66,6 +67,7 @@ const UserSearchResultSchema = z.object({
     friendIds: z.array(z.string()).optional(),
     pendingFriendRequestsReceived: z.array(z.string()).optional(),
     sentFriendRequests: z.array(z.string()).optional(),
+    isAdmin: z.boolean().optional(), // Added isAdmin
 });
 
 const SearchUsersOutputSchema = z.object({

@@ -198,5 +198,13 @@
     "username": "updaown",
     "content": "No",
     "timestamp": 1749342965425
+  },
+  {
+    "id": "msg-1749343176043-3mftn",
+    "roomId": "general",
+    "userId": "user-1749343151620-twocj",
+    "username": "Ben",
+    "content": "Hiii",
+    "timestamp": 1749343176043
   }
 ]

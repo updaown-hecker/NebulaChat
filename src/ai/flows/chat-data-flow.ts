@@ -9,7 +9,7 @@
  * - syncMessagesToServerFlow - Saves messages to a JSON file.
  */
 
-import {ai} from '@/ai/genkit';
+import {ai}from '@/ai/genkit';
 import {z}from 'genkit';
 import type { Room, Message, User } from '@/types'; // Import User type
 import fs from 'fs';
@@ -26,6 +26,7 @@ const UserSchema = z.object({
   friendIds: z.array(z.string()).optional(),
   pendingFriendRequestsReceived: z.array(z.string()).optional(),
   sentFriendRequests: z.array(z.string()).optional(),
+  isAdmin: z.boolean().optional(), // Added isAdmin
 });
 
 const RoomSchema = z.object({
@@ -48,8 +49,8 @@ const MessageSchema = z.object({
 
 // Initial default data if JSON files don't exist
 const DEFAULT_MOCK_USERS_SERVER: User[] = [
-    { id: 'user1', username: 'Alice', isTypingInRoomId: null, friendIds: [], pendingFriendRequestsReceived: [], sentFriendRequests: [] },
-    { id: 'user2', username: 'Bob', isTypingInRoomId: null, friendIds: [], pendingFriendRequestsReceived: [], sentFriendRequests: [] },
+    { id: 'user1', username: 'Alice', isTypingInRoomId: null, friendIds: [], pendingFriendRequestsReceived: [], sentFriendRequests: [], isAdmin: true },
+    { id: 'user2', username: 'Bob', isTypingInRoomId: null, friendIds: [], pendingFriendRequestsReceived: [], sentFriendRequests: [], isAdmin: false },
 ];
 
 const DEFAULT_MOCK_ROOMS_SERVER: Room[] = [
@@ -93,6 +94,8 @@ const readDataFromFile = <T>(filePath: string, defaultData: T, ensureFields?: (i
   try {
     const fileContent = fs.readFileSync(filePath, 'utf-8');
     if (fileContent.trim() === '') {
+      // If file is empty, return default data but DO NOT overwrite the empty file.
+      // This prevents accidental data loss if the file is cleared.
       console.warn(`File ${filePath} is empty. Returning default data. The file will NOT be overwritten with defaults.`);
       return defaultData;
     }
@@ -107,6 +110,7 @@ const readDataFromFile = <T>(filePath: string, defaultData: T, ensureFields?: (i
     console.error(`Error parsing JSON from file ${filePath}:`, error);
     const fileContentForDebug = fs.readFileSync(filePath, 'utf-8');
     console.warn(`Content preview (up to 500 chars): ${fileContentForDebug.substring(0,500)}...`);
+    // If parsing fails, return default data but DO NOT overwrite the problematic file.
     console.warn(`Returning default data for ${filePath} due to parsing error. The original file has NOT been overwritten.`);
     return defaultData;
   }
@@ -118,6 +122,7 @@ const ensureUserFields = (user: User): User => ({
   pendingFriendRequestsReceived: user.pendingFriendRequestsReceived || [],
   sentFriendRequests: user.sentFriendRequests || [],
   isTypingInRoomId: user.isTypingInRoomId === undefined ? null : user.isTypingInRoomId,
+  isAdmin: user.isAdmin || false, // Ensure isAdmin defaults to false
 });
 
 
