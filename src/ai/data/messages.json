@@ -624,6 +624,15 @@
     "userId": "user-1749337377092-9f2f7",
     "username": "updaown",
     "content": "hello everyone",
-    "timestamp": 1749357853838
+    "timestamp": 1749357853838,
+    "isEdited": false
+  },
+  {
+    "id": "msg-1749358206636-zthae",
+    "roomId": "dm_user-1749343151620-twocj_user1",
+    "userId": "user1",
+    "username": "admin",
+    "content": "hii",
+    "timestamp": 1749358206636
   }
 ]
