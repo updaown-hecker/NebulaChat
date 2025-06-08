@@ -1,12 +1,125 @@
-# Firebase Studio
+# Project Title
 
-This is a NextJS starter in Firebase Studio for the NebulaChat application.
+A brief description of your project. What does it do? What problem does it solve?
 
-## Getting Started
+## Table of Contents
+*   [Features](#features)
+    *   [Google AI API Key](#google-ai-api-key)
+*   [Installation](#installation)
+*   [Usage](#usage)
+*   [Contributing](#contributing)
+*   [License](#license)
+*   [Contact](#contact)
+*   [Environment Variables](#environment-variables)
 
-To get started, take a look at `src/app/page.tsx`.
+This application uses Genkit with the `googleAI` plugin for its AI-powered features (e.g., AI chat assistant commands). To enable these features, you need a Google AI API key.
 
-## Prerequisites
+1.  Obtain an API key from [Google AI Studio](https://aistudio.google.com/app/apikey).
+2.  Create a file named `.env` in the root of this project (if it doesn't already exist).
+3.  Add your API key to the `.env` file like this:
+
+- [License](#license)
+- [Contact](#contact)
+
+## Description
+
+Provide a more detailed explanation of your project. You can elaborate on the brief description here.
+
+## Features
+
+List the key features of your project. Use bullet points for readability.
+
+- Feature 1
+- Feature 2
+- Feature 3
+##
+### Google AI API Key
+
+This application uses Genkit with the `googleAI` plugin for its AI-powered features (e.g., AI chat assistant commands). To enable these features, you need a Google AI API key.
+
+1.  Obtain an API key from [Google AI Studio](https://aistudio.google.com/app/apikey).
+2.  Create a file named `.env` in the root of this project (if it doesn't already exist).
+3.  Add your API key to the `.env` file like this:
+
+
+
+## Installation
+
+Explain how to install your project. Include any prerequisites and step-by-step instructions.
+
+1. **Prerequisites:**
+   - Node.js (specify version)
+   - npm or yarn
+
+2. **Clone the repository**
+```
+bash
+   git clone <repository-url>
+   cd <project-directory>
+   
+```
+3. **Install dependencies:**
+```
+bash
+   npm install
+   # or
+   yarn install
+   
+```
+## Usage
+
+Explain how to use your project. Provide examples if necessary.
+
+To run the development server:
+```
+bash
+npm run dev
+# or
+yarn dev
+```
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
+To build the project for production:
+```
+bash
+npm run build
+# or
+yarn build
+```
+To start the production server:
+```
+bash
+npm start
+# or
+yarn start
+```
+## Contributing
+
+Explain how others can contribute to your project.
+
+1. Fork the repository.
+2. Create a new branch: `git checkout -b feature/your-feature-name`
+3. Make your changes and commit them: `git commit -m 'Add some feature'`
+4. Push to the branch: `git push origin feature/your-feature-name`
+5. Create a pull request.
+
+## License
+
+Specify the license under which your project is released.
+
+[Link to your license file](LICENSE)
+
+## Contact
+
+How can people reach you if they have questions or feedback?
+
+- Email: your.email@example.com
+- Twitter: @yourtwitterhandle (optional)
+- LinkedIn: your LinkedIn profile URL (optional)
+
+## Environment Variables
+
+This section will describe the environment variables required to run the project.
 
 ### Google AI API Key
 
@@ -16,33 +129,3 @@ This application uses Genkit with the `googleAI` plugin for its AI-powered featu
 2.  Create a file named `.env` in the root of this project (if it doesn't already exist).
 3.  Add your API key to the `.env` file like this:
 
-    ```env
-    GOOGLE_API_KEY=your_actual_api_key_here
-    ```
-
-    Replace `your_actual_api_key_here` with the API key you obtained.
-
-**Note**: If the `GOOGLE_API_KEY` is not provided or is invalid, AI-related functionalities will fail, which may result in errors like "Failed to fetch" when those features are invoked. Other parts of the application that do not use AI (like basic chat data storage in JSON files) might still function.
-
-## Development
-
-To run the application locally:
-
-1.  **Start the Next.js development server:**
-    ```bash
-    npm run dev
-    ```
-    This will typically start the Next.js app on `http://localhost:9002`.
-
-2.  **Start the Genkit development server (optional, for AI flow development/testing):**
-    In a separate terminal, run:
-    ```bash
-    npm run genkit:dev
-    ```
-    Or, for watching changes to AI flows:
-    ```bash
-    npm run genkit:watch
-    ```
-    The Genkit server often starts on a different port (e.g., `http://localhost:3400`). The Next.js application is configured to call these Genkit flows as server actions, so direct interaction with the Genkit server UI is usually for development and debugging of the flows themselves.
-
-Make sure your `GOOGLE_API_KEY` is set in the `.env` file for the AI functionalities to work correctly within the Next.js application.

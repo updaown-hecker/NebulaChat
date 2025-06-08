@@ -64,7 +64,7 @@ const POLLING_INTERVAL = 7000;
 const TYPING_DEBOUNCE_TIME = 500;
 
 export const ChatProvider = ({ children }: { children: ReactNode }) => {
-  const { user } = useAuth();
+  const { user, updateUser: updateAuthUser } = useAuth(); // Added updateAuthUser
   const { toast } = useToast();
   const [rooms, setRooms] = useLocalStorage<Room[]>(LOCAL_STORAGE_ROOMS_KEY, []);
   const [messages, setMessages] = useLocalStorage<Message[]>(LOCAL_STORAGE_MESSAGES_KEY, []);
@@ -104,7 +104,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
                 const updatedCurrentRoom = serverData.rooms.find(r => r.id === currentRoomRef.current!.id);
                 if (updatedCurrentRoom) {
                     if (updatedCurrentRoom.isPrivate && user && !updatedCurrentRoom.members.includes(user.id)) {
-                        setCurrentRoom(serverData.rooms.find(r => !r.isPrivate && r.members.includes(user.id)) || serverData.rooms.find(r => !r.isPrivate) || serverData.rooms[0] || null);
+                        setCurrentRoom(serverData.rooms.find(r => !r.isPrivate && user && r.members.includes(user.id)) || serverData.rooms.find(r => !r.isPrivate) || serverData.rooms[0] || null);
                         if (currentRoom) setLastActiveRoomId(currentRoom.id); else setLastActiveRoomId(null);
 
                     } else {
@@ -136,12 +136,19 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       const serverData = await fetchChatData();
       if (serverData && serverData.users) {
         setAllUsers(serverData.users);
+        // Also update AuthContext user if current user details changed
+        if (user && serverData.users.some(u => u.id === user.id)) {
+            const updatedCurrentUser = serverData.users.find(u => u.id === user.id);
+            if (updatedCurrentUser && JSON.stringify(updatedCurrentUser) !== JSON.stringify(user)) {
+                updateAuthUser(updatedCurrentUser);
+            }
+        }
       }
     } catch (error) {
       console.error("Error refreshing user data:", error);
       toast({ title: "Error", description: "Could not refresh user data.", variant: "destructive" });
     }
-  }, [setAllUsers, toast]);
+  }, [setAllUsers, toast, user, updateAuthUser]);
 
 
   const fetchAndUpdateChatData = useCallback(async (isInitialLoad = false) => {
@@ -180,6 +187,13 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         
         if (usersToUpdateLocally) {
           setAllUsers(usersToUpdateLocally);
+           // Also update AuthContext user if current user details changed
+            if (user && usersToUpdateLocally.some(u => u.id === user.id)) {
+                const updatedCurrentUser = usersToUpdateLocally.find(u => u.id === user.id);
+                if (updatedCurrentUser && JSON.stringify(updatedCurrentUser) !== JSON.stringify(user)) {
+                    updateAuthUser(updatedCurrentUser);
+                }
+            }
         }
         
         if (isInitialLoad) {
@@ -230,7 +244,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, lastActiveRoomId, setLastActiveRoomId, setRooms, rooms, setMessages, messages, setAllUsers, allUsers, setUnreadRoomIds, String(user?.id)]);
+  }, [user, lastActiveRoomId, setLastActiveRoomId, setRooms, rooms, setMessages, messages, setAllUsers, allUsers, setUnreadRoomIds, String(user?.id), updateAuthUser]);
 
   useEffect(() => {
     fetchAndUpdateChatData(true);
@@ -383,7 +397,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     if (existingDM) {
       // If DM exists, ensure current user is a member (handles rejoining after leaving)
       if (!existingDM.members.includes(user.id)) {
-        existingDM = { ...existingDM, members: [...existingDM.members, user.id].sort() };
+        existingDM = { ...existingDM, members: [...new Set([...existingDM.members, user.id])].sort() };
         finalRoomsToSync = finalRoomsToSync.map(r => r.id === existingDM!.id ? existingDM : r);
         roomsListChanged = true;
       }
@@ -595,7 +609,10 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       const response = await sendFriendRequestFlow({ requesterId: user.id, recipientId });
       toast({ title: response.success ? "Success" : "Error", description: response.message, variant: response.success ? "default" : "destructive" });
       if (response.success) {
-        await refreshAllUsers(); 
+        await refreshAllUsers(); // Refreshes all users list from "server"
+        if (response.updatedRequester && response.updatedRequester.id === user.id) {
+            updateAuthUser(response.updatedRequester); // Update current user in AuthContext
+        }
       }
       return response.success;
     } catch (error) {
@@ -603,7 +620,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       toast({ title: "Error", description: "Could not send friend request.", variant: "destructive" });
       return false;
     }
-  }, [user, toast, refreshAllUsers]);
+  }, [user, toast, refreshAllUsers, updateAuthUser]);
   
   const acceptFriendRequest = useCallback(async (requesterId: string): Promise<boolean> => {
     if (!user) return false;
@@ -612,6 +629,9 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       toast({ title: response.success ? "Success" : "Error", description: response.message, variant: response.success ? "default" : "destructive" });
       if (response.success) {
         await refreshAllUsers();
+         if (response.updatedRecipient && response.updatedRecipient.id === user.id) {
+            updateAuthUser(response.updatedRecipient);
+        }
       }
       return response.success;
     } catch (error) {
@@ -619,7 +639,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       toast({ title: "Error", description: "Could not accept friend request.", variant: "destructive" });
       return false;
     }
-  }, [user, toast, refreshAllUsers]);
+  }, [user, toast, refreshAllUsers, updateAuthUser]);
 
   const declineOrCancelFriendRequest = useCallback(async (otherUserId: string): Promise<boolean> => {
     if (!user) return false;
@@ -628,6 +648,9 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       toast({ title: response.success ? "Success" : "Error", description: response.message, variant: response.success ? "default" : "destructive" });
       if (response.success) {
         await refreshAllUsers();
+        if (response.updatedRequester && response.updatedRequester.id === user.id) {
+            updateAuthUser(response.updatedRequester);
+        }
       }
       return response.success;
     } catch (error) {
@@ -635,7 +658,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       toast({ title: "Error", description: "Could not manage friend request.", variant: "destructive" });
       return false;
     }
-  }, [user, toast, refreshAllUsers]);
+  }, [user, toast, refreshAllUsers, updateAuthUser]);
 
   const removeFriend = useCallback(async (friendId: string): Promise<boolean> => {
     if (!user) return false;
@@ -644,6 +667,9 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       toast({ title: response.success ? "Success" : "Error", description: response.message, variant: response.success ? "default" : "destructive" });
       if (response.success) {
         await refreshAllUsers();
+        if (response.updatedRequester && response.updatedRequester.id === user.id) {
+            updateAuthUser(response.updatedRequester);
+        }
       }
       return response.success;
     } catch (error) {
@@ -651,7 +677,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       toast({ title: "Error", description: "Could not remove friend.", variant: "destructive" });
       return false;
     }
-  }, [user, toast, refreshAllUsers]);
+  }, [user, toast, refreshAllUsers, updateAuthUser]);
 
   const inviteUserToRoom = useCallback(async (roomId: string, inviteeUserId: string): Promise<boolean> => {
     if (!user) return false;
@@ -692,7 +718,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         const response = await leaveDmRoomFlow({ userId: user.id, roomId });
         toast({ title: response.success ? "DM Hidden" : "Error", description: response.message, variant: response.success ? "default" : "destructive" });
         if (response.success) {
-            await refreshAllData(); // Refresh all data to update room list
+            await refreshAllData(false); // Refresh all data to update room list, no separate toast
             // If the current room was the one left, switch to a default/general room
             if (currentRoomRef.current && currentRoomRef.current.id === roomId) {
                 const generalRoom = rooms.find(r => r.id === 'general' && (!r.isPrivate || r.members.includes(user.id))) || rooms.find(r => !r.isPrivate && r.members.includes(user.id)) || rooms.find(r => !r.isPrivate);
@@ -744,8 +770,8 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       removeFriend,
       refreshAllUsers,
       inviteUserToRoom,
-      leaveDm, // Added leaveDm
-      refreshAllData, // Exposed refreshAllData
+      leaveDm, 
+      refreshAllData, 
     }}>
       {children}
     </ChatContext.Provider>

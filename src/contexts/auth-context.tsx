@@ -14,6 +14,7 @@ interface AuthContextType {
   logout: () => void;
   register: (username: string, password?: string) => Promise<boolean>;
   isAuthenticated: boolean;
+  updateUser: (updatedUserData: Partial<User>) => void; // New
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -30,6 +31,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         id: `guest-${Date.now()}`,
         username: username, // username is pre-generated for guests in LoginForm
         isGuest: true,
+        friendIds: [],
+        pendingFriendRequestsReceived: [],
+        sentFriendRequests: [],
       };
       setUser(guestUser);
       // No toast for guest login, it's usually silent
@@ -77,10 +81,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     toast({ title: "Logged Out", description: "You have been successfully logged out." });
   };
 
+  const updateUser = (updatedUserData: Partial<User>) => {
+    // Ensure user is not null before attempting to update
+    setUser(prevUser => {
+      if (prevUser === null) {
+        // This case should ideally not happen if updateUser is called for an authenticated user.
+        // But as a safeguard, if prevUser is null, we could either log an error,
+        // or if updatedUserData contains enough to be a full user, set it.
+        // For now, let's assume prevUser is not null if this is called correctly.
+        // If updatedUserData is a full User object and prevUser was null, this would be the way:
+        // return updatedUserData as User; 
+        // However, to merge, prevUser must exist.
+        return prevUser;
+      }
+      return { ...prevUser, ...updatedUserData };
+    });
+  };
+
+
   const isAuthenticated = useMemo(() => !!user && !user.isGuest, [user]);
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, register, isAuthenticated }}>
+    <AuthContext.Provider value={{ user, login, logout, register, isAuthenticated, updateUser }}>
       {children}
     </AuthContext.Provider>
   );
