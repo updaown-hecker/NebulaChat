@@ -162,5 +162,27 @@
     "isRead": false,
     "actorId": "user-1749337377092-9f2f7",
     "actorUsername": "updaown"
+  },
+  {
+    "id": "notif-1749357891043-khlfg",
+    "userId": "user1",
+    "type": "friend_request_received",
+    "message": "updaown sent you a friend request.",
+    "link": "/chat/friends",
+    "timestamp": 1749357891043,
+    "isRead": true,
+    "actorId": "user-1749337377092-9f2f7",
+    "actorUsername": "updaown"
+  },
+  {
+    "id": "notif-1749357899393-375bv",
+    "userId": "user-1749337377092-9f2f7",
+    "type": "generic",
+    "message": "admin accepted your friend request.",
+    "link": "/chat/friends",
+    "timestamp": 1749357899393,
+    "isRead": false,
+    "actorId": "user1",
+    "actorUsername": "admin"
   }
 ]
