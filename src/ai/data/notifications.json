@@ -65,7 +65,7 @@
     "message": "admin sent you a friend request.",
     "link": "/chat/friends",
     "timestamp": 1749356397124,
-    "isRead": false,
+    "isRead": true,
     "actorId": "user1",
     "actorUsername": "admin"
   },
@@ -87,7 +87,7 @@
     "message": "admin invited you to the private room: \"nuh uh\".",
     "link": "/chat?roomId=room-1749349989613-p3zjr",
     "timestamp": 1749356423927,
-    "isRead": false,
+    "isRead": true,
     "actorId": "user1",
     "actorUsername": "admin",
     "roomId": "room-1749349989613-p3zjr",

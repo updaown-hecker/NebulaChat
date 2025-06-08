@@ -36,15 +36,6 @@
     "ownerId": "user1"
   },
   {
-    "id": "dm_user-1749333571329_user1",
-    "name": "DM: updaown & admin",
-    "isPrivate": true,
-    "members": [
-      "user-1749337377092-9f2f7"
-    ],
-    "ownerId": "user-1749333571329"
-  },
-  {
     "id": "general",
     "name": "General",
     "isPrivate": false,
