@@ -377,7 +377,8 @@
     "userId": "user-1749343151620-twocj",
     "username": "Ben",
     "content": "Idk",
-    "timestamp": 1749352972673
+    "timestamp": 1749352972673,
+    "isEdited": false
   },
   {
     "id": "msg-1749352987574-jiw2w",
@@ -387,5 +388,13 @@
     "content": "who are you",
     "timestamp": 1749352987575,
     "isEdited": false
+  },
+  {
+    "id": "msg-1749353084081-4ujgf",
+    "roomId": "dm_user-1749343151620-twocj_user1",
+    "userId": "user1",
+    "username": "admin",
+    "content": "hii",
+    "timestamp": 1749353084081
   }
 ]
