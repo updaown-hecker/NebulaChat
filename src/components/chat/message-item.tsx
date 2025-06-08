@@ -118,7 +118,7 @@ export function MessageItem({ message }: MessageItemProps) {
                 Replying to <span className="font-semibold text-foreground">@{message.replyToUsername}</span>
               </div>
               {originalRepliedMessage && (
-                <p className="mt-1 pl-4 text-muted-foreground truncate italic">
+                <p className="mt-1 pl-4 text-foreground/80 truncate italic">
                   "{originalRepliedMessage.content}"
                 </p>
               )}

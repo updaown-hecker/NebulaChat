@@ -34,7 +34,7 @@
     "username": "Ben",
     "password": "2",
     "isGuest": false,
-    "isTypingInRoomId": null,
+    "isTypingInRoomId": "general",
     "friendIds": [],
     "pendingFriendRequestsReceived": [],
     "sentFriendRequests": [],

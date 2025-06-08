@@ -243,5 +243,16 @@
     "content": "Hi",
     "timestamp": 1749343670593,
     "isEdited": false
+  },
+  {
+    "id": "msg-1749346122664-hlcoe",
+    "roomId": "general",
+    "userId": "user-1749343151620-twocj",
+    "username": "Ben",
+    "content": "Hi updaown",
+    "timestamp": 1749346122664,
+    "replyToMessageId": "msg-1749341454311-k8ir7",
+    "replyToUsername": "updaown",
+    "isEdited": false
   }
 ]
