@@ -63,6 +63,7 @@ const ensureDataDirExists = () => {
 const readUsersFromFile = (): User[] => {
   ensureDataDirExists();
   if (!fs.existsSync(USERS_FILE_PATH)) {
+    fs.writeFileSync(USERS_FILE_PATH, JSON.stringify([], null, 2)); // Initialize with empty array if not exists
     return [];
   }
   try {
@@ -72,6 +73,7 @@ const readUsersFromFile = (): User[] => {
     // Ensure new fields exist
     return users.map(u => ({
         ...u,
+        isTypingInRoomId: u.isTypingInRoomId === undefined ? null : u.isTypingInRoomId,
         friendIds: u.friendIds || [],
         pendingFriendRequestsReceived: u.pendingFriendRequestsReceived || [],
         sentFriendRequests: u.sentFriendRequests || [],
@@ -123,7 +125,7 @@ const registerUserFlow = ai.defineFlow(
       username: username.trim(),
       password, // In a real app, HASH this password securely!
       isGuest: false,
-      isTypingInRoomId: null,
+      isTypingInRoomId: null, // Ensure this is null on registration
       friendIds: [],
       pendingFriendRequestsReceived: [],
       sentFriendRequests: [],
@@ -150,11 +152,17 @@ const loginUserFlow = ai.defineFlow(
   async ({ username, password }) => {
     console.log(`Attempting to log in user "${username}" (checking JSON)...`);
     const users = readUsersFromFile();
-    const account = users.find(acc => acc.username.toLowerCase() === username.toLowerCase());
+    const accountIndex = users.findIndex(acc => acc.username.toLowerCase() === username.toLowerCase());
 
-    if (account) {
+    if (accountIndex !== -1) {
+      const account = users[accountIndex];
       if ((account.password && account.password === password) || (!account.password && !password && account.isGuest)) {
-        const { password: _p, ...userToReturn } = account;
+        // Reset typing status on login
+        users[accountIndex].isTypingInRoomId = null;
+        writeUsersToFile(users);
+        
+        // Return user data without password, but with updated typing status
+        const { password: _p, ...userToReturn } = users[accountIndex]; 
         return { success: true, user: userToReturn, message: 'Login successful.' };
       }
     }

@@ -1,19 +1,29 @@
+
 [
   {
     "id": "user1",
     "username": "Alice",
-    "isTypingInRoomId": null
+    "isTypingInRoomId": null,
+    "friendIds": [],
+    "pendingFriendRequestsReceived": [],
+    "sentFriendRequests": []
   },
   {
     "id": "user2",
     "username": "Bob",
-    "isTypingInRoomId": null
+    "isTypingInRoomId": null,
+    "friendIds": [],
+    "pendingFriendRequestsReceived": [],
+    "sentFriendRequests": []
   },
   {
     "id": "user-1749337377092-9f2f7",
     "username": "updaown",
     "password": "1",
     "isGuest": false,
-    "isTypingInRoomId": "general"
+    "isTypingInRoomId": null,
+    "friendIds": [],
+    "pendingFriendRequestsReceived": [],
+    "sentFriendRequests": []
   }
 ]
