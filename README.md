@@ -6,7 +6,6 @@ NebulaChat is a modern, real-time chat application designed for seamless communi
 ## Table of Contents
 *   [Description](#description)
 *   [Features](#features)
-*   [Google AI API Key](#google-ai-api-key)
 *   [Installation](#installation)
 *   [Usage](#usage)
 *   [Contributing](#contributing)
@@ -18,6 +17,8 @@ NebulaChat is a modern, real-time chat application designed for seamless communi
 
 NebulaChat aims to provide a dynamic and interactive chat environment. Users can register accounts, log in, or continue as guests. The platform supports various forms of communication, from lively public discussions in themed rooms to private conversations with friends. Key functionalities include real-time message exchange, user presence indicators, a comprehensive friend management system, and in-app notifications for important events. The application's backend logic, including data persistence, is simulated using Genkit flows interacting with local JSON files, making it easy to set up and run for development and demonstration purposes.
 
+This application uses Genkit with the `googleAI` plugin for its AI-powered features (e.g., AI chat assistant commands). To enable these features, you need a Google AI API key. See the [Environment Variables](#environment-variables) section for setup instructions.
+
 ## Features
 
 NebulaChat comes packed with a variety of features to enhance user interaction:
@@ -25,12 +26,13 @@ NebulaChat comes packed with a variety of features to enhance user interaction:
 *   **Real-Time Chat:** Engage in instant message exchange within various chat rooms.
 *   **User Authentication:** Secure login, registration, and guest access options.
 *   **Public & Private Rooms:** Create and join public discussions or private, invite-only groups.
-*   **Direct Messaging (DMs):** Initiate private 1-on-1 conversations with other users.
+*   **Direct Messaging (DMs):** Initiate private 1-on-1 conversations with other users. Users can also leave/hide DM chats.
 *   **Friend System:**
     *   Search for users by username.
     *   Send, receive, accept, and decline friend requests.
     *   View and manage a list of friends.
     *   Remove friends.
+    *   Dedicated "Friends" page with tabs for All Friends and Pending Requests.
 *   **Notifications:** Receive in-app alerts for:
     *   New friend requests.
     *   Private room invitations.
@@ -54,17 +56,6 @@ NebulaChat comes packed with a variety of features to enhance user interaction:
 *   **User Presence:** (Implicitly through room member lists and typing indicators).
 *   **Data Persistence:** User accounts, rooms, messages, and notifications are saved locally using JSON files, managed by Genkit flows.
 
-### Google AI API Key
-
-This application uses Genkit with the `googleAI` plugin for its AI-powered features (e.g., AI chat assistant commands). To enable these features, you need a Google AI API key.
-
-1.  Obtain an API key from [Google AI Studio](https://aistudio.google.com/app/apikey).
-2.  Create a file named `.env` in the root of this project (if it doesn't already exist).
-3.  Add your API key to the `.env` file like this:
-    ```
-    GOOGLE_API_KEY=YOUR_API_KEY_HERE
-    ```
-
 ## Installation
 
 Explain how to install your project. Include any prerequisites and step-by-step instructions.
@@ -75,8 +66,8 @@ Explain how to install your project. Include any prerequisites and step-by-step 
 
 2.  **Clone the repository**
     ```bash
-    git clone <repository-url>
-    cd <project-directory>
+    git clone https://github.com/updaown-hecker/NebulaChat.git
+    cd NebulaChat
     ```
 3.  **Install dependencies:**
     ```bash
@@ -86,7 +77,7 @@ Explain how to install your project. Include any prerequisites and step-by-step 
     ```
 4.  **Set up Environment Variables:**
     *   Create a `.env` file in the root of the project.
-    *   Add your Google AI API key as described in the [Google AI API Key](#google-ai-api-key) section.
+    *   Add your Google AI API key as described in the [Environment Variables](#environment-variables) section.
 
 ## Usage
 
@@ -156,4 +147,3 @@ This application uses Genkit with the `googleAI` plugin for its AI-powered featu
     ```
     GOOGLE_API_KEY=YOUR_API_KEY_HERE
     ```
-```

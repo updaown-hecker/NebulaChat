@@ -25,7 +25,7 @@
     "username": "updaown",
     "password": "1",
     "isGuest": false,
-    "isTypingInRoomId": null,
+    "isTypingInRoomId": "room-1749349989613-p3zjr",
     "friendIds": [
       "user1"
     ],
