@@ -350,6 +350,42 @@
     "userId": "user1",
     "username": "admin",
     "content": "hi",
-    "timestamp": 1749352604640
+    "timestamp": 1749352604640,
+    "isEdited": false
+  },
+  {
+    "id": "msg-1749352849662-jb0ko",
+    "roomId": "dm_user-1749333571329_user-1749343151620-twocj",
+    "userId": "user-1749333571329",
+    "username": "updaown",
+    "content": "hii",
+    "timestamp": 1749352849662,
+    "isEdited": false
+  },
+  {
+    "id": "msg-1749352949739-jwn42",
+    "roomId": "dm_user-1749333571329_user-1749343151620-twocj",
+    "userId": "user-1749343151620-twocj",
+    "username": "Ben",
+    "content": "Hi",
+    "timestamp": 1749352949739,
+    "isEdited": false
+  },
+  {
+    "id": "msg-1749352972672-x8ipq",
+    "roomId": "dm_user-1749333571329_user-1749343151620-twocj",
+    "userId": "user-1749343151620-twocj",
+    "username": "Ben",
+    "content": "Idk",
+    "timestamp": 1749352972673
+  },
+  {
+    "id": "msg-1749352987574-jiw2w",
+    "roomId": "dm_user-1749333571329_user-1749343151620-twocj",
+    "userId": "user-1749333571329",
+    "username": "updaown",
+    "content": "who are you",
+    "timestamp": 1749352987575,
+    "isEdited": false
   }
 ]

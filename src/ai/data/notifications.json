@@ -24,5 +24,16 @@
     "actorUsername": "admin",
     "roomId": "dm_user-1749343151620-twocj_user1",
     "roomName": "DM: admin & Ben"
+  },
+  {
+    "id": "notif-1749352905993-ckc6o",
+    "userId": "user-1749343151620-twocj",
+    "type": "friend_request_received",
+    "message": "admin sent you a friend request.",
+    "link": "/chat/friends",
+    "timestamp": 1749352905993,
+    "isRead": true,
+    "actorId": "user1",
+    "actorUsername": "admin"
   }
 ]

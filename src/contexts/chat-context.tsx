@@ -376,29 +376,44 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     }
 
     const dmRoomId = `dm_${[user.id, otherUserId].sort().join('_')}`;
-    const existingDM = rooms.find(r => r.id === dmRoomId);
+    let existingDM = rooms.find(r => r.id === dmRoomId);
+    let roomsListChanged = false;
+    let finalRoomsToSync = [...rooms];
 
     if (existingDM) {
-      joinRoom(existingDM.id);
+      // If DM exists, ensure current user is a member (handles rejoining after leaving)
+      if (!existingDM.members.includes(user.id)) {
+        existingDM = { ...existingDM, members: [...existingDM.members, user.id].sort() };
+        finalRoomsToSync = finalRoomsToSync.map(r => r.id === existingDM!.id ? existingDM : r);
+        roomsListChanged = true;
+      }
     } else {
-      const newDmRoom: Room = {
+      // Create new DM room
+      existingDM = {
         id: dmRoomId,
         name: `DM: ${user.username} & ${otherUser.username}`, 
         isPrivate: true,
         members: [user.id, otherUserId].sort(), 
-        ownerId: user.id, 
+        ownerId: user.id, // Or null/system for DMs, owner might not be strictly needed for DMs
       };
-      const updatedRoomsList = [...rooms, newDmRoom];
-      setRooms(updatedRoomsList);
+      finalRoomsToSync.push(existingDM);
+      roomsListChanged = true;
+    }
+
+    if (roomsListChanged) {
+      setRooms(finalRoomsToSync);
       try {
-        await syncRoomsToServer({ rooms: updatedRoomsList });
-        joinRoom(newDmRoom.id);
+        await syncRoomsToServer({ rooms: finalRoomsToSync });
       } catch (error) {
-        console.error("Failed to sync new DM room:", error);
-        toast({title: "Error", description: "Could not create DM room on server.", variant: "destructive"});
+        console.error("Failed to sync DM room:", error);
+        toast({title: "Error", description: "Could not update DM room on server.", variant: "destructive"});
+        // Revert local state if server sync fails
         setRooms(rooms); 
+        return; // Don't proceed to join if sync failed
       }
     }
+    joinRoom(existingDM.id);
+
   }, [user, allUsers, rooms, joinRoom, setRooms, toast]);
 
 
@@ -560,10 +575,10 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
 
   const searchAllUsers = useCallback(async (query: string) => {
     if (!user) return;
-    if (!query.trim()) {
-      setSearchedUsers([]);
-      return;
-    }
+    // if (!query.trim()) { // Keep this commented to allow fetching all users with empty query
+    //   setSearchedUsers([]);
+    //   return;
+    // }
     try {
       const result = await searchUsers({ query, currentUserId: user.id });
       setSearchedUsers(result.users);

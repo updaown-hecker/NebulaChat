@@ -3,11 +3,12 @@
     "id": "user1",
     "username": "admin",
     "password": "admin123",
-    "isTypingInRoomId": "dm_user-1749343151620-twocj_user1",
+    "isTypingInRoomId": null,
     "friendIds": [],
     "pendingFriendRequestsReceived": [],
     "sentFriendRequests": [
-      "user-1749337377092-9f2f7"
+      "user-1749337377092-9f2f7",
+      "user-1749343151620-twocj"
     ],
     "isAdmin": true
   },
@@ -25,7 +26,7 @@
     "username": "updaown",
     "password": "1",
     "isGuest": false,
-    "isTypingInRoomId": "dm_user-1749343151620-twocj_user1",
+    "isTypingInRoomId": null,
     "friendIds": [],
     "pendingFriendRequestsReceived": [
       "user1"
@@ -38,9 +39,11 @@
     "username": "Ben",
     "password": "2",
     "isGuest": false,
-    "isTypingInRoomId": "general",
+    "isTypingInRoomId": null,
     "friendIds": [],
-    "pendingFriendRequestsReceived": [],
+    "pendingFriendRequestsReceived": [
+      "user1"
+    ],
     "sentFriendRequests": [],
     "isAdmin": false
   }

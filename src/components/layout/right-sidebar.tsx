@@ -18,7 +18,7 @@ import { cn } from '@/lib/utils';
 export function RightSidebar() {
   const { 
     currentRoom, 
-    allUsers, 
+    allUsers: contextAllUsers, // Renamed to avoid conflict with local allUsers if any
     typingUsers, 
     startDirectMessage,
     searchedUsers,
@@ -33,12 +33,22 @@ export function RightSidebar() {
   const [searchQuery, setSearchQuery] = useState('');
   const { toast } = useToast();
 
+  // Fetch initial list of users when component mounts and when currentUser changes
+  useEffect(() => {
+    if (currentUser) { // Ensure currentUser is available before searching
+      searchAllUsers(''); // Fetch all users initially
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.id]); // Rerun if currentUser.id changes
+
   useEffect(() => {
     const debounceTimer = setTimeout(() => {
-      searchAllUsers(searchQuery.trim());
+      if (currentUser) { // Ensure currentUser is available
+         searchAllUsers(searchQuery.trim());
+      }
     }, 300);
     return () => clearTimeout(debounceTimer);
-  }, [searchQuery, searchAllUsers]);
+  }, [searchQuery, searchAllUsers, currentUser]);
 
   const getInitials = (name: string) => {
     return name
@@ -50,18 +60,16 @@ export function RightSidebar() {
   };
 
   const handleInviteUserToRoom = async (roomId: string, inviteeUserId: string, inviteeUsername: string) => {
-    if (!currentUser || !currentUser.isAdmin) { // Simple check, could be more robust
-        const room = currentRoom; // Assuming currentRoom is the one to invite to
-        if (room && room.ownerId !== currentUser.id) {
-            toast({ title: "Permission Denied", description: "Only room owners can invite users to private rooms.", variant: "destructive"});
-            return;
-        }
+    if (!currentUser) return; 
+    const room = currentRoom; 
+    if (room && room.isPrivate && room.ownerId !== currentUser.id && !currentUser.isAdmin) {
+        toast({ title: "Permission Denied", description: "Only room owners or admins can invite users to this private room.", variant: "destructive"});
+        return;
     }
     const success = await inviteUserToRoom(roomId, inviteeUserId);
     if (success) {
       toast({ title: "User Invited", description: `${inviteeUsername} has been invited to the room.`});
     }
-    // Error toast is handled by context
   };
 
   const renderUserActions = (targetUser: User) => {
@@ -102,7 +110,6 @@ export function RightSidebar() {
       );
     }
     
-    // Invite to private room button
     if (currentRoom && currentRoom.isPrivate && (currentRoom.ownerId === currentUser.id || currentUser.isAdmin) && !currentRoom.members.includes(targetUser.id)) {
       actionButtons.push(
         <Button 
@@ -122,9 +129,13 @@ export function RightSidebar() {
     return <div className="ml-auto flex items-center space-x-1">{actionButtons}</div>;
   };
   
-  const usersToDisplay = searchQuery.trim() ? searchedUsers : allUsers.filter(u => u.id !== currentUser?.id);
-  const friends = allUsers.filter(u => currentUser?.friendIds?.includes(u.id));
-  const pendingRequests = allUsers.filter(u => currentUser?.pendingFriendRequestsReceived?.includes(u.id));
+  // Always use searchedUsers as the source of truth for display,
+  // as it's populated by searchAllUsers which directly queries the "backend" (JSON files).
+  const usersToDisplay = searchedUsers.filter(u => u.id !== currentUser?.id);
+  
+  const friends = contextAllUsers.filter(u => currentUser?.friendIds?.includes(u.id));
+  const pendingRequests = contextAllUsers.filter(u => currentUser?.pendingFriendRequestsReceived?.includes(u.id));
+
 
   return (
     <ScrollArea className="h-full">
@@ -138,15 +149,15 @@ export function RightSidebar() {
               </h3>
               <div className="space-y-1 text-sm">
                 <p><span className="font-medium">Name:</span> {
-                  currentRoom.id.startsWith('dm_') && currentUser && allUsers.length > 0
-                    ? allUsers.find(u => currentRoom.members.includes(u.id) && u.id !== currentUser.id)?.username || currentRoom.name
+                  currentRoom.id.startsWith('dm_') && currentUser && contextAllUsers.length > 0
+                    ? contextAllUsers.find(u => currentRoom.members.includes(u.id) && u.id !== currentUser.id)?.username || currentRoom.name
                     : currentRoom.name
                 }</p>
                 <p><span className="font-medium">Type:</span> {currentRoom.isPrivate ? (currentRoom.id.startsWith('dm_') ? "Direct Message" : "Private Group") : "Public Group"}</p>
                 <p><span className="font-medium">Members:</span> {currentRoom.members.length}</p>
-                 {(currentRoom.isPrivate && currentRoom.ownerId === currentUser?.id || currentUser?.isAdmin) && (
+                 {(currentRoom.isPrivate && currentUser && (currentRoom.ownerId === currentUser.id || currentUser.isAdmin)) && (
                    <p className="text-xs text-muted-foreground">
-                    {currentUser?.isAdmin && currentRoom.ownerId !== currentUser.id ? "You have admin access to this room." : "You are the owner of this private room."}
+                    {currentUser.isAdmin && currentRoom.ownerId !== currentUser.id ? "You have admin access to this room." : "You are the owner of this private room."}
                    </p>
                  )}
               </div>
@@ -189,14 +200,15 @@ export function RightSidebar() {
                   {userItem.isGuest && <Badge variant="outline" className="text-xs ml-1">Guest</Badge>}
                   
                   <div className="flex items-center space-x-1 ml-auto opacity-0 group-hover:opacity-100 focus-within:opacity-100">
-                    {!userItem.isGuest && renderUserActions(userItem)}
+                    {!userItem.isGuest && currentUser && renderUserActions(userItem)}
                      <Button
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7"
-                        onClick={() => startDirectMessage(userItem.id)}
+                        onClick={() => currentUser && startDirectMessage(userItem.id)}
                         title={`Message ${userItem.username}`}
                         aria-label={`Message ${userItem.username}`}
+                        disabled={!currentUser}
                       >
                         <MessageSquare size={16} />
                       </Button>
@@ -205,12 +217,12 @@ export function RightSidebar() {
               ))}
             </ul>
           ) : (
-            <p className="text-sm text-muted-foreground px-1.5">{searchQuery.trim() ? 'No users found.' : 'No other users to display.'}</p>
+            <p className="text-sm text-muted-foreground px-1.5">{searchQuery.trim() ? 'No users found.' : 'Type to search for users.'}</p>
           )}
         </div>
         <Separator/>
 
-        {pendingRequests.length > 0 && (
+        {pendingRequests.length > 0 && currentUser && (
           <div>
             <h3 className="text-md font-semibold mb-3 flex items-center gap-2">
               <Hourglass className="h-5 w-5 text-primary" />
@@ -240,6 +252,7 @@ export function RightSidebar() {
           </div>
         )}
         
+        {currentUser && (
         <div>
             <h3 className="text-md font-semibold mb-3 flex items-center gap-2">
               <CheckCircle className="h-5 w-5 text-primary" />
@@ -280,6 +293,7 @@ export function RightSidebar() {
               <p className="text-sm text-muted-foreground px-1.5">No friends yet. Search for users to add them!</p>
             )}
         </div>
+        )}
       </div>
     </ScrollArea>
   );
