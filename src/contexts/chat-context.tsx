@@ -27,6 +27,7 @@ interface ChatContextType {
   searchedUsers: User[];
   onlineUsers: User[];
   typingUsers: User[];
+  replyingToMessage: Message | null; // Added for reply feature
   createRoom: (name: string, isPrivate: boolean) => Promise<Room | null>;
   joinRoom: (roomId: string) => void;
   startDirectMessage: (otherUserId: string) => Promise<void>;
@@ -34,6 +35,7 @@ interface ChatContextType {
   editMessage: (messageId: string, newContent: string) => Promise<boolean>;
   deleteMessage: (messageId: string) => Promise<boolean>;
   setUserTyping: (isTyping: boolean) => void;
+  setReplyingTo: (message: Message | null) => void; // Added for reply feature
   isLoadingAiResponse: boolean;
   isLoadingInitialData: boolean;
   unreadRoomIds: Record<string, boolean>;
@@ -70,6 +72,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   const [currentRoom, setCurrentRoom] = useState<Room | null>(null);
   const [lastActiveRoomId, setLastActiveRoomId] = useLocalStorage<string | null>(LOCAL_STORAGE_LAST_ACTIVE_ROOM_ID_KEY, null);
   const [unreadRoomIds, setUnreadRoomIds] = useLocalStorage<Record<string, boolean>>(LOCAL_STORAGE_UNREAD_ROOM_IDS_KEY, {});
+  const [replyingToMessage, setReplyingToMessage] = useState<Message | null>(null); // Added for reply
 
   const [onlineUsers, setOnlineUsers] = useState<User[]>([]);
   const [typingUsers, setTypingUsers] = useState<User[]>([]);
@@ -83,6 +86,10 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
 
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastSentTypingStatusRef = useRef<boolean>(false);
+
+  const setReplyingTo = (message: Message | null) => {
+    setReplyingToMessage(message);
+  };
 
   const refreshAllData = useCallback(async (showToast = false) => {
     try {
@@ -472,10 +479,15 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         username: user.username,
         content,
         timestamp: Date.now(),
+        ...(replyingToMessage && { 
+          replyToMessageId: replyingToMessage.id,
+          replyToUsername: replyingToMessage.username,
+        }),
       };
       addMessage(newMessage);
+      setReplyingToMessage(null); // Clear reply state after sending
     }
-  }, [user, addMessage, handleAiCommand, setUserTyping]);
+  }, [user, addMessage, handleAiCommand, setUserTyping, replyingToMessage]);
 
   const editMessage = useCallback(async (messageId: string, newContent: string): Promise<boolean> => {
     if (!user) return false;
@@ -644,6 +656,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       searchedUsers,
       onlineUsers,
       typingUsers,
+      replyingToMessage, // Added
       createRoom,
       joinRoom,
       startDirectMessage,
@@ -651,6 +664,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       editMessage,
       deleteMessage,
       setUserTyping,
+      setReplyingTo, // Added
       isLoadingAiResponse,
       isLoadingInitialData,
       unreadRoomIds,
@@ -674,3 +688,4 @@ export const useChat = (): ChatContextType => {
   }
   return context;
 };
+

@@ -8,7 +8,7 @@ import { useChat } from '@/contexts/chat-context';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Button, buttonVariants } from '@/components/ui/button'; // Added buttonVariants import
+import { Button, buttonVariants } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,9 +16,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { EditMessageDialog } from './edit-message-dialog'; // New component
+import { EditMessageDialog } from './edit-message-dialog';
 import { formatDistanceToNow } from 'date-fns';
-import { Bot, ShieldCheck, MoreHorizontal, Edit, Trash2 } from 'lucide-react';
+import { Bot, ShieldCheck, MoreHorizontal, Edit, Trash2, MessageSquare, CornerDownRight } from 'lucide-react';
 
 interface MessageItemProps {
   message: Message;
@@ -26,7 +26,7 @@ interface MessageItemProps {
 
 export function MessageItem({ message }: MessageItemProps) {
   const { user: currentUser } = useAuth();
-  const { allUsers, editMessage, deleteMessage } = useChat();
+  const { allUsers, messages: allMessages, editMessage, deleteMessage, setReplyingTo } = useChat();
 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -38,6 +38,7 @@ export function MessageItem({ message }: MessageItemProps) {
   const senderIsAdmin = sender?.isAdmin;
   const canEdit = (currentUser?.id === message.userId || currentUser?.isAdmin === true) && !isAIMessage;
   const canDelete = (currentUser?.id === message.userId || currentUser?.isAdmin === true) && !isAIMessage;
+  const canReply = !isAIMessage; // Anyone can reply to non-AI messages
 
   const getInitials = (name: string) => {
     return name
@@ -57,15 +58,23 @@ export function MessageItem({ message }: MessageItemProps) {
     setShowDeleteConfirm(false);
   };
 
+  const handleReply = () => {
+    setReplyingTo(message);
+  };
+
   const displayTimestamp = message.isEdited && message.editedTimestamp
     ? formatDistanceToNow(new Date(message.editedTimestamp), { addSuffix: true })
     : formatDistanceToNow(new Date(message.timestamp), { addSuffix: true });
+
+  const originalRepliedMessage = message.replyToMessageId 
+    ? allMessages.find(m => m.id === message.replyToMessageId) 
+    : null;
 
   return (
     <>
       <div
         className={cn(
-          "flex items-start gap-3 p-3 rounded-lg transition-all duration-150 ease-in-out group relative", // Added group and relative
+          "flex items-start gap-3 p-3 rounded-lg transition-all duration-150 ease-in-out group relative",
           isCurrentUser ? "justify-end" : "justify-start",
           isAIMessage && !isCurrentUser ? "bg-secondary/50" : ""
         )}
@@ -101,6 +110,21 @@ export function MessageItem({ message }: MessageItemProps) {
               )}
             </div>
           )}
+
+          {message.replyToMessageId && message.replyToUsername && (
+            <div className="mb-2 p-2 rounded-md bg-black/10 dark:bg-white/10 border-l-2 border-primary/50 text-xs">
+              <div className="flex items-center gap-1 text-muted-foreground">
+                <CornerDownRight size={12} className="inline-block" />
+                Replying to <span className="font-semibold text-foreground">@{message.replyToUsername}</span>
+              </div>
+              {originalRepliedMessage && (
+                <p className="mt-1 pl-4 text-muted-foreground truncate italic">
+                  "{originalRepliedMessage.content}"
+                </p>
+              )}
+            </div>
+          )}
+
           <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
           <div className={cn(
             "text-xs mt-1 opacity-60 flex items-center",
@@ -117,7 +141,7 @@ export function MessageItem({ message }: MessageItemProps) {
             </AvatarFallback>
           </Avatar>
         )}
-        {(canEdit || canDelete) && (
+        {(canEdit || canDelete || canReply) && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -133,6 +157,12 @@ export function MessageItem({ message }: MessageItemProps) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align={isCurrentUser ? "end" : "start"}>
+              {canReply && (
+                <DropdownMenuItem onClick={handleReply}>
+                  <MessageSquare className="mr-2 h-4 w-4" />
+                  <span>Reply</span>
+                </DropdownMenuItem>
+              )}
               {canEdit && (
                 <DropdownMenuItem onClick={() => setIsEditDialogOpen(true)}>
                   <Edit className="mr-2 h-4 w-4" />
@@ -180,3 +210,4 @@ export function MessageItem({ message }: MessageItemProps) {
     </>
   );
 }
+

@@ -5,15 +5,16 @@ import React, { useState, useEffect } from 'react';
 import { useChat } from '@/contexts/chat-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Send, Smile, Paperclip } from 'lucide-react'; 
+import { Send, Smile, Paperclip, X, CornerDownRight } from 'lucide-react'; 
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 const EMOJIS = ['😀', '😂', '😍', '🤔', '👍', '🎉', '❤️', '🔥'];
 
 export function ChatInput() {
   const [message, setMessage] = useState('');
-  const { sendMessage, currentRoom, isLoadingAiResponse, setUserTyping } = useChat();
+  const { sendMessage, currentRoom, isLoadingAiResponse, setUserTyping, replyingToMessage, setReplyingTo } = useChat();
   const { toast } = useToast();
 
   const typingTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
@@ -24,12 +25,12 @@ export function ChatInput() {
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
       }
-      if (message.trim()) { // If unmounting with text, send stop typing
+      if (message.trim()) { 
         setUserTyping(false);
       }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [setUserTyping, message]); // message dependency to handle unmount case
+  }, [setUserTyping, message]); 
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newText = e.target.value;
@@ -40,12 +41,15 @@ export function ChatInput() {
     }
 
     if (newText.trim()) {
-      setUserTyping(true); // Indicate start of typing immediately (debounced by context)
+      setUserTyping(true); 
       typingTimeoutRef.current = setTimeout(() => {
-        setUserTyping(false); // Send stop typing if paused for too long
-      }, 3000); // e.g., 3 seconds of inactivity
+        setUserTyping(false); 
+      }, 3000); 
     } else {
-      setUserTyping(false); // Empty input, stop typing
+      setUserTyping(false); 
+      if (replyingToMessage) { // If input is cleared and was replying, cancel reply
+        setReplyingTo(null);
+      }
     }
   };
 
@@ -56,15 +60,15 @@ export function ChatInput() {
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
     }
-    setUserTyping(false); // Stop typing on send
+    setUserTyping(false); 
     
     await sendMessage(message.trim());
     setMessage('');
+    // setReplyingTo(null); // Handled by sendMessage in context now
   };
 
   const handleEmojiSelect = (emoji: string) => {
     setMessage(prev => prev + emoji);
-    // Optionally trigger typing status update here too if desired
     setUserTyping(true);
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     typingTimeoutRef.current = setTimeout(() => setUserTyping(false), 3000);
@@ -81,17 +85,36 @@ export function ChatInput() {
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
     }
-    // Only send stop typing if there was text, to avoid redundant calls
     if (message.trim()) { 
       setUserTyping(false);
     }
   };
 
+  const cancelReply = () => {
+    setReplyingTo(null);
+  };
+
   if (!currentRoom) return null;
 
   return (
-    <form onSubmit={handleSubmit} className="p-4 border-t bg-background">
-      <div className="relative flex items-center gap-2">
+    <div className="p-4 border-t bg-background">
+      {replyingToMessage && (
+        <div className="mb-2 p-2 text-sm bg-muted rounded-md flex justify-between items-center shadow">
+          <div className="flex-1 overflow-hidden">
+            <div className="flex items-center text-muted-foreground">
+              <CornerDownRight size={14} className="mr-1 shrink-0" />
+              Replying to <span className="font-semibold text-foreground ml-1">@{replyingToMessage.username}</span>
+            </div>
+            <p className="text-xs text-muted-foreground truncate italic mt-0.5 ml-5">
+              "{replyingToMessage.content}"
+            </p>
+          </div>
+          <Button variant="ghost" size="icon" onClick={cancelReply} aria-label="Cancel reply" className="ml-2 shrink-0">
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+      <form onSubmit={handleSubmit} className="relative flex items-center gap-2">
         <Popover>
           <PopoverTrigger asChild>
             <Button variant="ghost" size="icon" type="button" className="shrink-0">
@@ -132,7 +155,7 @@ export function ChatInput() {
           placeholder={isLoadingAiResponse ? "NebulaAI is thinking..." : `Message #${currentRoom.name}... (try /help)`}
           value={message}
           onChange={handleInputChange}
-          onBlur={handleInputBlur} // Handle stop typing on blur
+          onBlur={handleInputBlur} 
           className="flex-1 text-base pr-12"
           disabled={isLoadingAiResponse}
           autoFocus
@@ -146,7 +169,8 @@ export function ChatInput() {
         >
           <Send className="h-5 w-5" />
         </Button>
-      </div>
-    </form>
+      </form>
+    </div>
   );
 }
+

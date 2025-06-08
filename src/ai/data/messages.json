@@ -175,9 +175,10 @@
     "roomId": "general",
     "userId": "user-1749337377092-9f2f7",
     "username": "updaown",
-    "content": "Nuh uh",
+    "content": "No",
     "timestamp": 1749340862056,
-    "isEdited": false
+    "isEdited": true,
+    "editedTimestamp": 1749345862034
   },
   {
     "id": "msg-1749341454311-k8ir7",
@@ -229,9 +230,10 @@
     "roomId": "general",
     "userId": "user-1749343151620-twocj",
     "username": "Ben",
-    "content": "Hiii",
+    "content": "Nuh uh",
     "timestamp": 1749343176043,
-    "isEdited": false
+    "isEdited": true,
+    "editedTimestamp": 1749345837456
   },
   {
     "id": "msg-1749343670593-kms92",

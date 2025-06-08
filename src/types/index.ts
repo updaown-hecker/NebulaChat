@@ -30,6 +30,8 @@ export interface Message {
   isAIMessage?: boolean; // Flag for AI assistant messages
   isEdited?: boolean; // True if the message has been edited
   editedTimestamp?: number; // Timestamp of the last edit
+  replyToMessageId?: string; // ID of the message being replied to
+  replyToUsername?: string; // Username of the author of the message being replied to
 }
 
 export type Theme = 'light' | 'dark';
@@ -39,3 +41,4 @@ export interface Settings {
   theme: Theme;
   fontSize: FontSize;
 }
+

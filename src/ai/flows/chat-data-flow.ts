@@ -45,8 +45,10 @@ const MessageSchema = z.object({
   content: z.string(),
   timestamp: z.number(),
   isAIMessage: z.boolean().optional(),
-  isEdited: z.boolean().optional(), // Added
-  editedTimestamp: z.number().optional(), // Added
+  isEdited: z.boolean().optional(),
+  editedTimestamp: z.number().optional(),
+  replyToMessageId: z.string().optional(), // Added
+  replyToUsername: z.string().optional(), // Added
 });
 
 // Initial default data if JSON files don't exist
@@ -128,6 +130,8 @@ const ensureMessageFields = (message: Message): Message => ({
     ...message,
     isEdited: message.isEdited || false,
     editedTimestamp: message.editedTimestamp || undefined,
+    replyToMessageId: message.replyToMessageId || undefined,
+    replyToUsername: message.replyToUsername || undefined,
 });
 
 
@@ -213,3 +217,4 @@ const syncMessagesToServerFlow = ai.defineFlow(
     return { success: true, message: "Messages synced to JSON file." };
   }
 );
+
