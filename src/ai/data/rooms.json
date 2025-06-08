@@ -34,5 +34,14 @@
       "user-1749334881349"
     ],
     "ownerId": "user2"
+  },
+  {
+    "id": "room-1749342841239-lv0c2",
+    "name": "Testing",
+    "isPrivate": true,
+    "members": [
+      "user-1749334881349"
+    ],
+    "ownerId": "user-1749334881349"
   }
 ]

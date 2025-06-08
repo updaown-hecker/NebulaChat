@@ -9,9 +9,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Users, Info, Edit3, MessageSquare, UserPlus, CheckCircle, XCircle, UserMinus, Hourglass, Search } from 'lucide-react';
+import { Users, Info, Edit3, MessageSquare, UserPlus, CheckCircle, XCircle, UserMinus, Hourglass, Search, UserPlusIcon } from 'lucide-react';
 import type { User } from '@/types';
 import { Separator } from '../ui/separator';
+import { useToast } from '@/hooks/use-toast';
 
 export function RightSidebar() {
   const { 
@@ -25,13 +26,15 @@ export function RightSidebar() {
     acceptFriendRequest,
     declineOrCancelFriendRequest,
     removeFriend,
+    inviteUserToRoom, // Added
   } = useChat();
   const { user: currentUser } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
+  const { toast } = useToast();
 
   useEffect(() => {
     const debounceTimer = setTimeout(() => {
-      searchAllUsers(searchQuery.trim()); // Let context handle empty query to clear results
+      searchAllUsers(searchQuery.trim());
     }, 300);
     return () => clearTimeout(debounceTimer);
   }, [searchQuery, searchAllUsers]);
@@ -45,24 +48,12 @@ export function RightSidebar() {
       .substring(0, 2);
   };
 
-  const handleSendFriendRequest = async (recipientId: string) => {
-    await sendFriendRequest(recipientId);
-  };
-
-  const handleAcceptFriendRequest = async (requesterId: string) => {
-    await acceptFriendRequest(requesterId);
-  };
-
-  const handleDeclineFriendRequest = async (otherUserId: string) => {
-    await declineOrCancelFriendRequest(otherUserId);
-  };
-  
-  const handleCancelFriendRequest = async (otherUserId: string) => {
-    await declineOrCancelFriendRequest(otherUserId);
-  };
-
-  const handleRemoveFriend = async (friendId: string) => {
-    await removeFriend(friendId);
+  const handleInviteUserToRoom = async (roomId: string, inviteeUserId: string, inviteeUsername: string) => {
+    const success = await inviteUserToRoom(roomId, inviteeUserId);
+    if (success) {
+      toast({ title: "User Invited", description: `${inviteeUsername} has been invited to the room.`});
+    }
+    // Error toast is handled by context
   };
 
   const renderUserActions = (targetUser: User) => {
@@ -76,33 +67,50 @@ export function RightSidebar() {
 
     if (isFriend) {
       actionButtons.push(
-        <Button key="remove" variant="outline" size="sm" onClick={() => handleRemoveFriend(targetUser.id)} className="text-xs h-7">
+        <Button key="remove" variant="outline" size="sm" onClick={() => removeFriend(targetUser.id)} className="text-xs h-7">
           <UserMinus className="mr-1 h-3 w-3" /> Friends
         </Button>
       );
     } else if (requestSent) {
       actionButtons.push(
-        <Button key="sent" variant="outline" size="sm" onClick={() => handleCancelFriendRequest(targetUser.id)} className="text-xs h-7">
+        <Button key="sent" variant="outline" size="sm" onClick={() => declineOrCancelFriendRequest(targetUser.id)} className="text-xs h-7">
           <Hourglass className="mr-1 h-3 w-3" /> Sent
         </Button>
       );
     } else if (requestReceived) {
       actionButtons.push(
-        <Button key="accept" variant="default" size="sm" onClick={() => handleAcceptFriendRequest(targetUser.id)} className="text-xs h-7">
+        <Button key="accept" variant="default" size="sm" onClick={() => acceptFriendRequest(targetUser.id)} className="text-xs h-7">
           <CheckCircle className="mr-1 h-3 w-3" /> Accept
         </Button>,
-        <Button key="decline" variant="outline" size="sm" onClick={() => handleDeclineFriendRequest(targetUser.id)} className="ml-1 text-xs h-7">
+        <Button key="decline" variant="outline" size="sm" onClick={() => declineOrCancelFriendRequest(targetUser.id)} className="ml-1 text-xs h-7">
           <XCircle className="mr-1 h-3 w-3" /> Decline
         </Button>
       );
     } else {
       actionButtons.push(
-        <Button key="add" variant="default" size="sm" onClick={() => handleSendFriendRequest(targetUser.id)} className="text-xs h-7">
+        <Button key="add" variant="default" size="sm" onClick={() => sendFriendRequest(targetUser.id)} className="text-xs h-7">
           <UserPlus className="mr-1 h-3 w-3" /> Add
         </Button>
       );
     }
     
+    // Invite to private room button
+    if (currentRoom && currentRoom.isPrivate && currentRoom.ownerId === currentUser.id && !currentRoom.members.includes(targetUser.id)) {
+      actionButtons.push(
+        <Button 
+          key="invite" 
+          variant="outline" 
+          size="sm" 
+          onClick={() => handleInviteUserToRoom(currentRoom.id, targetUser.id, targetUser.username)} 
+          className="text-xs h-7 ml-1"
+          title={`Invite ${targetUser.username} to ${currentRoom.name}`}
+        >
+          <UserPlusIcon className="mr-1 h-3 w-3" /> Invite
+        </Button>
+      );
+    }
+
+
     return <div className="ml-auto flex items-center space-x-1">{actionButtons}</div>;
   };
   
@@ -128,6 +136,9 @@ export function RightSidebar() {
                 }</p>
                 <p><span className="font-medium">Type:</span> {currentRoom.isPrivate ? (currentRoom.id.startsWith('dm_') ? "Direct Message" : "Private Group") : "Public Group"}</p>
                 <p><span className="font-medium">Members:</span> {currentRoom.members.length}</p>
+                 {currentRoom.isPrivate && currentRoom.ownerId === currentUser?.id && (
+                   <p className="text-xs text-muted-foreground">You are the owner of this private room.</p>
+                 )}
               </div>
             </div>
             <Separator/>
@@ -147,7 +158,7 @@ export function RightSidebar() {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
           {usersToDisplay.length > 0 ? (
-            <ul className="space-y-2 max-h-48 overflow-y-auto pr-1"> {/* Adjusted max height */}
+            <ul className="space-y-2 max-h-48 overflow-y-auto pr-1">
               {usersToDisplay.map((userItem: User) => (
                 <li key={userItem.id} className="flex items-center gap-2 p-1.5 rounded-md hover:bg-muted transition-colors group">
                   <Avatar className="h-7 w-7 text-xs">

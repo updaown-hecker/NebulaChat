@@ -9,6 +9,7 @@ import { aiTutorialCommand } from '@/ai/flows/ai-tutorial-command';
 import { fetchChatData, syncRoomsToServer, syncMessagesToServer } from '@/ai/flows/chat-data-flow';
 import { updateUserTypingStatus } from '@/ai/flows/auth-flow';
 import { searchUsers, sendFriendRequest as sendFriendRequestFlow, acceptFriendRequest as acceptFriendRequestFlow, declineOrCancelFriendRequest as declineOrCancelFriendRequestFlow, removeFriend as removeFriendFlow } from '@/ai/flows/friend-flow';
+import { inviteUserToRoom as inviteUserToRoomFlow } from '@/ai/flows/room-management-flow'; // Added
 import useLocalStorage from '@/hooks/use-local-storage';
 import {
   LOCAL_STORAGE_MESSAGES_KEY,
@@ -39,7 +40,8 @@ interface ChatContextType {
   acceptFriendRequest: (requesterId: string) => Promise<boolean>;
   declineOrCancelFriendRequest: (otherUserId: string) => Promise<boolean>;
   removeFriend: (friendId: string) => Promise<boolean>;
-  refreshAllUsers: () => Promise<void>; // To update user data after friend actions
+  refreshAllUsers: () => Promise<void>;
+  inviteUserToRoom: (roomId: string, inviteeUserId: string) => Promise<boolean>; // Added
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -80,9 +82,41 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastSentTypingStatusRef = useRef<boolean>(false);
 
-  const refreshAllUsers = useCallback(async () => {
+  const refreshAllData = useCallback(async (showToast = false) => { // Combined refresh logic
     try {
-      const serverData = await fetchChatData(); // This fetches all data including users
+      const serverData = await fetchChatData();
+      if (serverData) {
+        if (serverData.users) setAllUsers(serverData.users);
+        if (serverData.rooms) {
+            setRooms(serverData.rooms); // Potentially smarter merge later
+             // After rooms are set, if currentRoom exists, ensure it's the latest version
+            if (currentRoomRef.current) {
+                const updatedCurrentRoom = serverData.rooms.find(r => r.id === currentRoomRef.current!.id);
+                if (updatedCurrentRoom) {
+                    setCurrentRoom(updatedCurrentRoom);
+                } else {
+                    // Current room no longer exists, clear it or pick another
+                    setCurrentRoom(serverData.rooms.length > 0 ? serverData.rooms[0] : null);
+                }
+            }
+        }
+        if (serverData.messages) setMessages(serverData.messages); // Potentially smarter merge later
+      }
+      if (showToast) {
+        toast({ title: "Data Synced", description: "Chat data has been refreshed." });
+      }
+    } catch (error) {
+      console.error("Error refreshing data:", error);
+      if (showToast) {
+        toast({ title: "Error", description: "Could not refresh chat data.", variant: "destructive" });
+      }
+    }
+  }, [setAllUsers, setRooms, setMessages, toast]);
+
+
+  const refreshAllUsers = useCallback(async () => { // Kept separate if only users need refresh sometimes
+    try {
+      const serverData = await fetchChatData();
       if (serverData && serverData.users) {
         setAllUsers(serverData.users);
       }
@@ -91,6 +125,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       toast({ title: "Error", description: "Could not refresh user data.", variant: "destructive" });
     }
   }, [setAllUsers, toast]);
+
 
   const fetchAndUpdateChatData = useCallback(async (isInitialLoad = false) => {
     try {
@@ -101,7 +136,6 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
 
       if (serverData) {
         if (serverData.users) {
-          // Check if users data has changed significantly to warrant a local update
           if (JSON.stringify(serverData.users) !== JSON.stringify(allUsers)) {
              usersToUpdateLocally = serverData.users;
           }
@@ -115,7 +149,8 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
             const roomsMerged = [
               ...serverData.rooms, 
               ...prevLocalRooms.filter(lr => !serverRoomIds.has(lr.id)) 
-            ];
+            ].sort((a,b) => (a.name || "").localeCompare(b.name || ""));
+
 
             if (newRoomsFromServer.length > 0 || prevLocalRooms.length !== roomsMerged.length || JSON.stringify(roomsMerged) !== JSON.stringify(prevLocalRooms)) {
               roomsToSyncOnServer = roomsMerged;
@@ -300,7 +335,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       id: `room-${Date.now()}-${Math.random().toString(36).substring(2,7)}`,
       name,
       isPrivate,
-      members: [user.id],
+      members: [user.id], // Owner is a member by default
       ownerId: user.id,
     };
     let roomsToSync: Room[] | null = null;
@@ -334,9 +369,10 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     } else {
       const newDmRoom: Room = {
         id: dmRoomId,
-        name: `DM: ${user.username} & ${otherUser.username}`,
+        name: `DM: ${user.username} & ${otherUser.username}`, // Internal name
         isPrivate: true,
         members: [user.id, otherUserId],
+        ownerId: user.id, // DMs can conceptually have the initiator as owner for consistency
       };
       let roomsToSync: Room[] | null = null;
       setRooms(prevRooms => {
@@ -387,7 +423,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         roomId: currentRoomRef.current.id,
         userId: 'ai-assistant',
         username: 'NebulaAI',
-        content: "Sorry, I encountered an error trying to process your command.",
+        content: "Sorry, I encountered an error trying to process your command. Ensure your GOOGLE_API_KEY is set.",
         timestamp: Date.now(),
         isAIMessage: true,
       });
@@ -463,7 +499,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       const response = await sendFriendRequestFlow({ requesterId: user.id, recipientId });
       toast({ title: response.success ? "Success" : "Error", description: response.message, variant: response.success ? "default" : "destructive" });
       if (response.success) {
-        await refreshAllUsers(); // Refresh user data to get updated sent/pending requests
+        await refreshAllUsers(); 
       }
       return response.success;
     } catch (error) {
@@ -521,6 +557,26 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [user, toast, refreshAllUsers]);
 
+  const inviteUserToRoom = useCallback(async (roomId: string, inviteeUserId: string): Promise<boolean> => {
+    if (!user) return false;
+    try {
+      const response = await inviteUserToRoomFlow({ roomId, inviterUserId: user.id, inviteeUserId });
+      toast({ title: response.success ? "Success" : "Error", description: response.message, variant: response.success ? "default" : "destructive" });
+      if (response.success && response.updatedRoom) {
+        // Refresh all rooms or update just the specific one
+        setRooms(prevRooms => prevRooms.map(r => r.id === roomId ? response.updatedRoom! : r));
+        if (currentRoomRef.current && currentRoomRef.current.id === roomId) {
+            setCurrentRoom(response.updatedRoom);
+        }
+      }
+      return response.success;
+    } catch (error) {
+      console.error("Error inviting user to room:", error);
+      toast({ title: "Error", description: "Could not invite user to room.", variant: "destructive" });
+      return false;
+    }
+  }, [user, toast, setRooms, setCurrentRoom]);
+
 
   return (
     <ChatContext.Provider value={{
@@ -545,6 +601,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       declineOrCancelFriendRequest,
       removeFriend,
       refreshAllUsers,
+      inviteUserToRoom, // Added
     }}>
       {children}
     </ChatContext.Provider>
