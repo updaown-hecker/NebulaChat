@@ -139,7 +139,7 @@ export function RightSidebar() {
 
   return (
     <ScrollArea className="h-full">
-      <div className="px-4 pt-16 pb-4 space-y-6"> {/* Changed p-4 to px-4 pt-16 pb-4 */}
+      <div className="px-4 pt-20 pb-4 space-y-6"> {/* Changed pt-16 to pt-20 */}
         {currentRoom && (
           <>
             <div>
