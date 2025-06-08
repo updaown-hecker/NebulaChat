@@ -4,9 +4,7 @@
     "username": "admin",
     "password": "admin123",
     "isTypingInRoomId": "dm_user-1749337377092-9f2f7_user1",
-    "friendIds": [
-      "user-1749337377092-9f2f7"
-    ],
+    "friendIds": [],
     "pendingFriendRequestsReceived": [],
     "sentFriendRequests": [
       "user-1749343151620-twocj",
@@ -31,9 +29,7 @@
     "password": "1",
     "isGuest": false,
     "isTypingInRoomId": null,
-    "friendIds": [
-      "user1"
-    ],
+    "friendIds": [],
     "pendingFriendRequestsReceived": [],
     "sentFriendRequests": [],
     "isAdmin": false

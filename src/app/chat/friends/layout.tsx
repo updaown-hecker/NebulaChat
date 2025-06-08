@@ -1,20 +1,11 @@
 
-// This file can be removed if not strictly needed,
-// as /chat/layout.tsx already provides AppLayout.
-// However, keeping it allows for future friends-specific layout adjustments.
-import { AuthGuard } from '@/components/auth-guard';
-import { AppLayout } from '@/components/layout/app-layout';
-
+// AppLayout and AuthGuard are already provided by /chat/layout.tsx
+// This layout can be used for friends-specific adjustments if needed in the future,
+// but for now, it doesn't need to re-apply the main AppLayout.
 export default function FriendsLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <AuthGuard>
-      <AppLayout>
-        {children}
-      </AppLayout>
-    </AuthGuard>
-  );
+  return <>{children}</>;
 }
