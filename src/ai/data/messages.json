@@ -254,5 +254,64 @@
     "replyToMessageId": "msg-1749341454311-k8ir7",
     "replyToUsername": "updaown",
     "isEdited": false
+  },
+  {
+    "id": "msg-1749349727939-5og8t",
+    "roomId": "general",
+    "userId": "user-1749333571329",
+    "username": "updaown",
+    "content": "hiii",
+    "timestamp": 1749349727939,
+    "isEdited": false
+  },
+  {
+    "id": "msg-1749349737306-k8fkz",
+    "roomId": "general",
+    "userId": "user-1749333571329",
+    "username": "updaown",
+    "content": "hola",
+    "timestamp": 1749349737306,
+    "replyToMessageId": "msg-1749346122664-hlcoe",
+    "replyToUsername": "Ben",
+    "isEdited": false
+  },
+  {
+    "id": "msg-1749349804818-q28d9",
+    "roomId": "dm_user-1749333571329_user1",
+    "userId": "user-1749333571329",
+    "username": "updaown",
+    "content": "hi there",
+    "timestamp": 1749349804818,
+    "isEdited": false
+  },
+  {
+    "id": "msg-1749349813145-s5ogd",
+    "roomId": "dm_user-1749333571329_user1",
+    "userId": "user1",
+    "username": "admin",
+    "content": "hello who are you",
+    "timestamp": 1749349813145,
+    "isEdited": false
+  },
+  {
+    "id": "msg-1749349816921-2bavs",
+    "roomId": "dm_user-1749333571329_user1",
+    "userId": "user-1749333571329",
+    "username": "updaown",
+    "content": "beeen",
+    "timestamp": 1749349816921,
+    "isEdited": true,
+    "editedTimestamp": 1749349853892
+  },
+  {
+    "id": "msg-1749349844066-05xu7",
+    "roomId": "dm_user-1749333571329_user1",
+    "userId": "user-1749333571329",
+    "username": "updaown",
+    "content": "haha",
+    "timestamp": 1749349844066,
+    "replyToMessageId": "msg-1749349816921-2bavs",
+    "replyToUsername": "updaown",
+    "isEdited": false
   }
 ]

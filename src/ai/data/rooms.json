@@ -12,6 +12,16 @@
     "ownerId": "user2"
   },
   {
+    "id": "dm_user-1749333571329_user1",
+    "name": "DM: updaown & admin",
+    "isPrivate": true,
+    "members": [
+      "user-1749333571329",
+      "user1"
+    ],
+    "ownerId": "user-1749333571329"
+  },
+  {
     "id": "general",
     "name": "General",
     "isPrivate": false,
@@ -22,7 +32,8 @@
       "user-1749336395407",
       "user-1749334881349",
       "user-1749343151620-twocj",
-      "user-1749337377092-9f2f7"
+      "user-1749337377092-9f2f7",
+      "user-1749333571329"
     ],
     "ownerId": "user1"
   },
@@ -35,7 +46,8 @@
       "guest1",
       "user-1749336395407",
       "user-1749334881349",
-      "user-1749343151620-twocj"
+      "user-1749343151620-twocj",
+      "user-1749333571329"
     ],
     "ownerId": "user1"
   },
@@ -45,7 +57,8 @@
     "isPrivate": false,
     "members": [
       "user-1749337377092-9f2f7",
-      "user-1749343151620-twocj"
+      "user-1749343151620-twocj",
+      "user-1749333571329"
     ],
     "ownerId": "user-1749337377092-9f2f7"
   },
