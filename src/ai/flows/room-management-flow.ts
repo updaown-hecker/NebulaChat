@@ -1,7 +1,7 @@
 
 'use server';
 /**
- * @fileOverview Manages room-related operations like inviting users to private rooms.
+ * @fileOverview Manages room-related operations like inviting users to private rooms and leaving DMs.
  * Uses JSON files for persistence.
  */
 
@@ -10,8 +10,8 @@ import { z } from 'genkit';
 import type { Room, User } from '@/types';
 import fs from 'fs';
 import path from 'path';
-import { createNotification } from './notification-flow'; // Import createNotification
-import { readUsersFromFile as readAllUsers } from './friend-flow'; // To get inviter username
+import { createNotification } from './notification-flow'; 
+import { readUsersFromFile as readAllUsers } from './friend-flow'; 
 
 const DATA_DIR = path.join(process.cwd(), 'src', 'ai', 'data');
 const ROOMS_FILE_PATH = path.join(DATA_DIR, 'rooms.json');
@@ -58,7 +58,7 @@ const InviteUserToRoomInputSchema = z.object({
 });
 export type InviteUserToRoomInput = z.infer<typeof InviteUserToRoomInputSchema>;
 
-const RoomOutputSchema = z.object({ // Re-defining for clarity, can be imported if structure is complex
+const RoomOutputSchema = z.object({ 
   id: z.string(),
   name: z.string(),
   isPrivate: z.boolean(),
@@ -97,7 +97,7 @@ const inviteUserToRoomFlow = ai.defineFlow(
       return { success: false, message: "This room is public. Users can join directly." };
     }
     
-    const allUsers = await readAllUsers(); // Fetch all users to get inviter's username
+    const allUsers = await readAllUsers(); 
     const inviter = allUsers.find(u => u.id === inviterUserId);
 
     if (room.ownerId !== inviterUserId && !(inviter && inviter.isAdmin)) {
@@ -112,12 +112,11 @@ const inviteUserToRoomFlow = ai.defineFlow(
     rooms[roomIndex] = room;
     writeRoomsToFile(rooms);
 
-    // Create notification for the invitee
     await createNotification({
       userId: inviteeUserId,
       type: 'room_invite',
       message: `${inviter?.username || 'Someone'} invited you to the private room: "${room.name}".`,
-      link: `/chat?roomId=${roomId}`, // Link to join the room
+      link: `/chat?roomId=${roomId}`, 
       actorId: inviterUserId,
       actorUsername: inviter?.username,
       roomId: room.id,
@@ -128,3 +127,61 @@ const inviteUserToRoomFlow = ai.defineFlow(
   }
 );
 
+// --- Leave DM Room ---
+const LeaveDmRoomInputSchema = z.object({
+  userId: z.string(),
+  roomId: z.string(),
+});
+export type LeaveDmRoomInput = z.infer<typeof LeaveDmRoomInputSchema>;
+
+const LeaveDmRoomOutputSchema = z.object({
+  success: z.boolean(),
+  message: z.string().optional(),
+});
+export type LeaveDmRoomOutput = z.infer<typeof LeaveDmRoomOutputSchema>;
+
+export async function leaveDmRoom(input: LeaveDmRoomInput): Promise<LeaveDmRoomOutput> {
+    return leaveDmRoomFlow(input);
+}
+
+const leaveDmRoomFlow = ai.defineFlow(
+    {
+        name: 'leaveDmRoomFlow',
+        inputSchema: LeaveDmRoomInputSchema,
+        outputSchema: LeaveDmRoomOutputSchema,
+    },
+    async ({ userId, roomId }) => {
+        let rooms = readRoomsFromFile();
+        const roomIndex = rooms.findIndex(r => r.id === roomId);
+
+        if (roomIndex === -1) {
+            return { success: false, message: "DM room not found." };
+        }
+
+        const room = rooms[roomIndex];
+
+        if (!room.id.startsWith('dm_')) {
+            return { success: false, message: "This action is only for DM rooms."};
+        }
+
+        if (!room.members.includes(userId)) {
+            return { success: false, message: "You are not a member of this DM room." };
+        }
+
+        // Remove the user from the members list
+        room.members = room.members.filter(memberId => memberId !== userId);
+
+        if (room.members.length === 0) {
+            // If no members are left, remove the room entirely
+            rooms = rooms.filter(r => r.id !== roomId);
+            console.log(`DM room ${roomId} deleted as all members left.`);
+        } else {
+            // Otherwise, update the room with the modified members list
+            rooms[roomIndex] = room;
+        }
+        
+        writeRoomsToFile(rooms);
+
+        return { success: true, message: "You have left the DM chat." };
+    }
+);

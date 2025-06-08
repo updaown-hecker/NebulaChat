@@ -332,6 +332,24 @@
     "userId": "user1",
     "username": "admin",
     "content": "up",
-    "timestamp": 1749352460097
+    "timestamp": 1749352460097,
+    "isEdited": false
+  },
+  {
+    "id": "msg-1749352598060-dhx38",
+    "roomId": "dm_user-1749343151620-twocj_user1",
+    "userId": "user-1749333571329",
+    "username": "updaown",
+    "content": "hi",
+    "timestamp": 1749352598060,
+    "isEdited": false
+  },
+  {
+    "id": "msg-1749352604640-j7ivu",
+    "roomId": "dm_user-1749343151620-twocj_user1",
+    "userId": "user1",
+    "username": "admin",
+    "content": "hi",
+    "timestamp": 1749352604640
   }
 ]

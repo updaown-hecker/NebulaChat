@@ -9,7 +9,7 @@ import { aiTutorialCommand } from '@/ai/flows/ai-tutorial-command';
 import { fetchChatData, syncRoomsToServer, syncMessagesToServer } from '@/ai/flows/chat-data-flow';
 import { updateUserTypingStatus } from '@/ai/flows/auth-flow';
 import { searchUsers, sendFriendRequest as sendFriendRequestFlow, acceptFriendRequest as acceptFriendRequestFlow, declineOrCancelFriendRequest as declineOrCancelFriendRequestFlow, removeFriend as removeFriendFlow } from '@/ai/flows/friend-flow';
-import { inviteUserToRoom as inviteUserToRoomFlow } from '@/ai/flows/room-management-flow';
+import { inviteUserToRoom as inviteUserToRoomFlow, leaveDmRoom as leaveDmRoomFlow } from '@/ai/flows/room-management-flow'; // Added leaveDmRoomFlow
 import useLocalStorage from '@/hooks/use-local-storage';
 import {
   LOCAL_STORAGE_MESSAGES_KEY,
@@ -27,7 +27,7 @@ interface ChatContextType {
   searchedUsers: User[];
   onlineUsers: User[];
   typingUsers: User[];
-  replyingToMessage: Message | null; // Added for reply feature
+  replyingToMessage: Message | null; 
   createRoom: (name: string, isPrivate: boolean) => Promise<Room | null>;
   joinRoom: (roomId: string) => void;
   startDirectMessage: (otherUserId: string) => Promise<void>;
@@ -35,7 +35,7 @@ interface ChatContextType {
   editMessage: (messageId: string, newContent: string) => Promise<boolean>;
   deleteMessage: (messageId: string) => Promise<boolean>;
   setUserTyping: (isTyping: boolean) => void;
-  setReplyingTo: (message: Message | null) => void; // Added for reply feature
+  setReplyingTo: (message: Message | null) => void; 
   isLoadingAiResponse: boolean;
   isLoadingInitialData: boolean;
   unreadRoomIds: Record<string, boolean>;
@@ -46,6 +46,8 @@ interface ChatContextType {
   removeFriend: (friendId: string) => Promise<boolean>;
   refreshAllUsers: () => Promise<void>;
   inviteUserToRoom: (roomId: string, inviteeUserId: string) => Promise<boolean>;
+  leaveDm: (roomId: string) => Promise<boolean>; // Added for leaving DMs
+  refreshAllData: (showToast?: boolean) => Promise<void>; // Exposed refreshAllData
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -72,7 +74,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   const [currentRoom, setCurrentRoom] = useState<Room | null>(null);
   const [lastActiveRoomId, setLastActiveRoomId] = useLocalStorage<string | null>(LOCAL_STORAGE_LAST_ACTIVE_ROOM_ID_KEY, null);
   const [unreadRoomIds, setUnreadRoomIds] = useLocalStorage<Record<string, boolean>>(LOCAL_STORAGE_UNREAD_ROOM_IDS_KEY, {});
-  const [replyingToMessage, setReplyingToMessage] = useState<Message | null>(null); // Added for reply
+  const [replyingToMessage, setReplyingToMessage] = useState<Message | null>(null); 
 
   const [onlineUsers, setOnlineUsers] = useState<User[]>([]);
   const [typingUsers, setTypingUsers] = useState<User[]>([]);
@@ -96,22 +98,22 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       const serverData = await fetchChatData();
       if (serverData) {
         if (serverData.users) setAllUsers(serverData.users);
-        // Important: setRooms with the full list from the server for data integrity if syncing all rooms.
-        // Filtering for display should happen in components like RoomList.
         if (serverData.rooms) {
             setRooms(serverData.rooms);
-            // Update currentRoom based on the latest full list
             if (currentRoomRef.current) {
                 const updatedCurrentRoom = serverData.rooms.find(r => r.id === currentRoomRef.current!.id);
                 if (updatedCurrentRoom) {
-                    // Ensure current user is still a member if it's private
                     if (updatedCurrentRoom.isPrivate && user && !updatedCurrentRoom.members.includes(user.id)) {
-                        setCurrentRoom(serverData.rooms.find(r => !r.isPrivate) || serverData.rooms[0] || null);
+                        setCurrentRoom(serverData.rooms.find(r => !r.isPrivate && r.members.includes(user.id)) || serverData.rooms.find(r => !r.isPrivate) || serverData.rooms[0] || null);
+                        if (currentRoom) setLastActiveRoomId(currentRoom.id); else setLastActiveRoomId(null);
+
                     } else {
                         setCurrentRoom(updatedCurrentRoom);
                     }
-                } else { // Current room no longer exists or user lost access
-                    setCurrentRoom(serverData.rooms.find(r => !r.isPrivate) || serverData.rooms[0] || null);
+                } else { 
+                    const newRoomToJoin = serverData.rooms.find(r => !r.isPrivate && user && r.members.includes(user.id)) || serverData.rooms.find(r => !r.isPrivate) || serverData.rooms[0] || null;
+                    setCurrentRoom(newRoomToJoin);
+                    if (newRoomToJoin) setLastActiveRoomId(newRoomToJoin.id); else setLastActiveRoomId(null);
                 }
             }
         }
@@ -126,7 +128,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         toast({ title: "Error", description: "Could not refresh chat data.", variant: "destructive" });
       }
     }
-  }, [setAllUsers, setRooms, setMessages, toast, user]);
+  }, [setAllUsers, setRooms, setMessages, toast, user, setLastActiveRoomId, currentRoom]);
 
 
   const refreshAllUsers = useCallback(async () => {
@@ -227,7 +229,8 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         setIsLoadingInitialData(false);
       }
     }
-  }, [user, lastActiveRoomId, setLastActiveRoomId, setRooms, rooms, setMessages, messages, setAllUsers, allUsers, setUnreadRoomIds]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, lastActiveRoomId, setLastActiveRoomId, setRooms, rooms, setMessages, messages, setAllUsers, allUsers, setUnreadRoomIds, String(user?.id)]);
 
   useEffect(() => {
     fetchAndUpdateChatData(true);
@@ -495,7 +498,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
 
   const editMessage = useCallback(async (messageId: string, newContent: string): Promise<boolean> => {
     if (!user) return false;
-    const originalMessages = messages; // Keep a copy for potential revert
+    const originalMessages = messages; 
     const messageIndex = originalMessages.findIndex(m => m.id === messageId);
     if (messageIndex === -1) return false;
 
@@ -530,7 +533,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
 
   const deleteMessage = useCallback(async (messageId: string): Promise<boolean> => {
     if (!user) return false;
-    const originalMessages = messages; // Keep a copy for potential revert
+    const originalMessages = messages; 
     const messageToDelete = originalMessages.find(m => m.id === messageId);
     if (!messageToDelete) return false;
 
@@ -668,6 +671,35 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [user, toast, setRooms, rooms, setCurrentRoom]);
 
+  const leaveDm = useCallback(async (roomId: string): Promise<boolean> => {
+    if (!user) return false;
+    try {
+        const response = await leaveDmRoomFlow({ userId: user.id, roomId });
+        toast({ title: response.success ? "DM Hidden" : "Error", description: response.message, variant: response.success ? "default" : "destructive" });
+        if (response.success) {
+            await refreshAllData(); // Refresh all data to update room list
+            // If the current room was the one left, switch to a default/general room
+            if (currentRoomRef.current && currentRoomRef.current.id === roomId) {
+                const generalRoom = rooms.find(r => r.id === 'general' && (!r.isPrivate || r.members.includes(user.id))) || rooms.find(r => !r.isPrivate && r.members.includes(user.id)) || rooms.find(r => !r.isPrivate);
+                if (generalRoom) {
+                    joinRoom(generalRoom.id);
+                } else if (rooms.length > 0 && rooms.filter(r => r.id !== roomId).length > 0) {
+                     const nextAvailableRoom = rooms.filter(r => r.id !== roomId && (!r.isPrivate || r.members.includes(user.id)))[0];
+                     if (nextAvailableRoom) joinRoom(nextAvailableRoom.id); else setCurrentRoom(null);
+                }
+                 else {
+                    setCurrentRoom(null);
+                }
+            }
+        }
+        return response.success;
+    } catch (error) {
+        console.error("Error leaving DM:", error);
+        toast({ title: "Error", description: "Could not leave DM chat.", variant: "destructive" });
+        return false;
+    }
+  }, [user, toast, refreshAllData, rooms, joinRoom]);
+
 
   return (
     <ChatContext.Provider value={{
@@ -697,6 +729,8 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       removeFriend,
       refreshAllUsers,
       inviteUserToRoom,
+      leaveDm, // Added leaveDm
+      refreshAllData, // Exposed refreshAllData
     }}>
       {children}
     </ChatContext.Provider>
@@ -710,4 +744,3 @@ export const useChat = (): ChatContextType => {
   }
   return context;
 };
-
