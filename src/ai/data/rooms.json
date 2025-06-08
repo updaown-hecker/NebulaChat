@@ -13,12 +13,34 @@
     "ownerId": "user2"
   },
   {
+    "id": "dm_user-1749343151620-twocj_user1",
+    "name": "DM: admin & Ben",
+    "isPrivate": true,
+    "members": [
+      "user1",
+      "user-1749343151620-twocj",
+      "user-1749337377092-9f2f7"
+    ],
+    "ownerId": "user1"
+  },
+  {
+    "id": "dm_user-1749337377092-9f2f7_user1",
+    "name": "DM: admin & updaown",
+    "isPrivate": true,
+    "members": [
+      "user1",
+      "user-1749337377092-9f2f7"
+    ],
+    "ownerId": "user1"
+  },
+  {
     "id": "dm_user-1749333571329_user1",
     "name": "DM: updaown & admin",
     "isPrivate": true,
     "members": [
       "user-1749333571329",
-      "user1"
+      "user1",
+      "user-1749337377092-9f2f7"
     ],
     "ownerId": "user-1749333571329"
   },

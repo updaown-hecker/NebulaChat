@@ -31,10 +31,10 @@ export function Header({ isDesktopRightSidebarOpen, toggleDesktopRightSidebar }:
         <NotificationBell />
         <SettingsPanel />
         {toggleDesktopRightSidebar && (
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="hidden lg:inline-flex" 
+          <Button
+            variant="ghost"
+            size="icon"
+            className="hidden md:inline-flex" // Changed from lg:inline-flex to md:inline-flex
             onClick={toggleDesktopRightSidebar}
             aria-label={isDesktopRightSidebarOpen ? "Close right sidebar" : "Open right sidebar"}
           >

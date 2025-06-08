@@ -1,2 +1,28 @@
-
-[]
+[
+  {
+    "id": "notif-1749350361843-uvasp",
+    "userId": "user-1749337377092-9f2f7",
+    "type": "room_invite",
+    "message": "admin invited you to the private room: \"DM: updaown & admin\".",
+    "link": "/chat?roomId=dm_user-1749333571329_user1",
+    "timestamp": 1749350361843,
+    "isRead": true,
+    "actorId": "user1",
+    "actorUsername": "admin",
+    "roomId": "dm_user-1749333571329_user1",
+    "roomName": "DM: updaown & admin"
+  },
+  {
+    "id": "notif-1749350411343-a67zq",
+    "userId": "user-1749337377092-9f2f7",
+    "type": "room_invite",
+    "message": "admin invited you to the private room: \"DM: admin & Ben\".",
+    "link": "/chat?roomId=dm_user-1749343151620-twocj_user1",
+    "timestamp": 1749350411343,
+    "isRead": false,
+    "actorId": "user1",
+    "actorUsername": "admin",
+    "roomId": "dm_user-1749343151620-twocj_user1",
+    "roomName": "DM: admin & Ben"
+  }
+]
