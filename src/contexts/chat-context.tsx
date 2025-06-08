@@ -232,7 +232,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     fetchAndUpdateChatData(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]); 
+  }, [String(user?.id)]); 
 
   useEffect(() => {
     if (isLoadingInitialData) return;
