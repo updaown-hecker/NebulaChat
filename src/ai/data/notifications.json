@@ -92,5 +92,64 @@
     "actorUsername": "admin",
     "roomId": "room-1749349989613-p3zjr",
     "roomName": "nuh uh"
+  },
+  {
+    "id": "notif-1749357407213-72cbo",
+    "userId": "user-1749343151620-twocj",
+    "type": "friend_request_received",
+    "message": "admin sent you a friend request.",
+    "link": "/chat/friends",
+    "timestamp": 1749357407213,
+    "isRead": false,
+    "actorId": "user1",
+    "actorUsername": "admin"
+  },
+  {
+    "id": "notif-1749357409284-g1dtb",
+    "userId": "user2",
+    "type": "friend_request_received",
+    "message": "admin sent you a friend request.",
+    "link": "/chat/friends",
+    "timestamp": 1749357409285,
+    "isRead": false,
+    "actorId": "user1",
+    "actorUsername": "admin"
+  },
+  {
+    "id": "notif-1749357429088-wauib",
+    "userId": "user-1749343151620-twocj",
+    "type": "friend_request_received",
+    "message": "updaown sent you a friend request.",
+    "link": "/chat/friends",
+    "timestamp": 1749357429088,
+    "isRead": false,
+    "actorId": "user-1749337377092-9f2f7",
+    "actorUsername": "updaown"
+  },
+  {
+    "id": "notif-1749357446522-d8734",
+    "userId": "user1",
+    "type": "room_invite",
+    "message": "updaown invited you to the private room: \"Room2\".",
+    "link": "/chat?roomId=room-1749343115555-5w5fv",
+    "timestamp": 1749357446522,
+    "isRead": true,
+    "actorId": "user-1749337377092-9f2f7",
+    "actorUsername": "updaown",
+    "roomId": "room-1749343115555-5w5fv",
+    "roomName": "Room2"
+  },
+  {
+    "id": "notif-1749357484446-5lnn1",
+    "userId": "user1",
+    "type": "room_invite",
+    "message": "updaown invited you to the private room: \"testing 3\".",
+    "link": "/chat?roomId=room-1749357495875-9wmys",
+    "timestamp": 1749357484446,
+    "isRead": true,
+    "actorId": "user-1749337377092-9f2f7",
+    "actorUsername": "updaown",
+    "roomId": "room-1749357495875-9wmys",
+    "roomName": "testing 3"
   }
 ]

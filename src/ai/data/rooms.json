@@ -94,7 +94,8 @@
     "name": "Room2",
     "isPrivate": true,
     "members": [
-      "user-1749337377092-9f2f7"
+      "user-1749337377092-9f2f7",
+      "user1"
     ],
     "ownerId": "user-1749337377092-9f2f7"
   },
@@ -126,5 +127,15 @@
       "user2"
     ],
     "ownerId": "user1"
+  },
+  {
+    "id": "room-1749357495875-9wmys",
+    "name": "testing 3",
+    "isPrivate": true,
+    "members": [
+      "user-1749337377092-9f2f7",
+      "user1"
+    ],
+    "ownerId": "user-1749337377092-9f2f7"
   }
 ]

@@ -5,33 +5,50 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { useChat } from '@/contexts/chat-context';
 import type { User, Room } from '@/types';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from '@/components/ui/button';
-import { UserPlus, Users, MailWarning, CheckCircle, XCircle, Hourglass, MessagesSquare } from 'lucide-react';
+import { UserPlus, Users, MailWarning, CheckCircle, XCircle, Hourglass, MessagesSquare, MessageCircle } from 'lucide-react';
 import { AddFriendInput } from '@/components/friends/add-friend-input';
 import { UserListItem } from '@/components/friends/user-list-item';
-import { DirectMessageList } from '@/components/dms/direct-message-list'; // Import DM List
+import { DirectMessageList } from '@/components/dms/direct-message-list';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { MessageList } from '@/components/chat/message-list';
+import { ChatInput } from '@/components/chat/chat-input';
+import { cn } from '@/lib/utils';
+
+type ActiveFriendsView = 'dm_chat' | 'all_friends' | 'pending_requests';
 
 export default function FriendsPage() {
   const { user: currentUser } = useAuth();
   const {
     allUsers,
-    rooms, // Get all rooms to filter DMs
+    rooms,
+    currentRoom, // We'll use this to know if a DM is selected
     sendFriendRequest,
     acceptFriendRequest,
     declineOrCancelFriendRequest,
     removeFriend,
     startDirectMessage,
     refreshAllUsers,
+    joinRoom, // Need to call joinRoom when a DM is clicked
   } = useChat();
 
-  const [activeTab, setActiveTab] = useState("all");
+  const [activeView, setActiveView] = useState<ActiveFriendsView>('dm_chat');
 
   useEffect(() => {
     refreshAllUsers();
   }, [currentUser, refreshAllUsers]);
+
+  // If currentRoom changes to a DM, switch to DM chat view
+  useEffect(() => {
+    if (currentRoom && currentRoom.id.startsWith('dm_')) {
+      setActiveView('dm_chat');
+    }
+    // If currentRoom becomes null or not a DM, and we were in dm_chat view,
+    // perhaps switch to a default view like 'all_friends' or a placeholder.
+    // For now, it will just show nothing in the chat area if currentRoom is not a DM.
+  }, [currentRoom]);
+
 
   const friends = useMemo(() => {
     if (!currentUser) return [];
@@ -47,13 +64,6 @@ export default function FriendsPage() {
     if (!currentUser) return [];
     return allUsers.filter(u => currentUser.sentFriendRequests?.includes(u.id));
   }, [allUsers, currentUser]);
-
-  const directMessages = useMemo(() => {
-    if (!currentUser) return [];
-    return rooms.filter(room => 
-      room.id.startsWith('dm_') && room.members.includes(currentUser.id)
-    );
-  }, [rooms, currentUser]);
 
   if (!currentUser) {
     return (
@@ -78,100 +88,137 @@ export default function FriendsPage() {
     }
   };
 
+  const renderRightPanelContent = () => {
+    if (activeView === 'dm_chat') {
+      if (currentRoom && currentRoom.id.startsWith('dm_')) {
+        return (
+          <>
+            {/* Optionally, a header for the current DM can be added here */}
+            {/* Example: <div className="p-4 border-b text-lg font-semibold">{currentRoom.name}</div> */}
+            <MessageList />
+            <ChatInput />
+          </>
+        );
+      }
+      return (
+        <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-4">
+          <MessageCircle size={48} className="mb-4 opacity-50" />
+          <p className="text-center">Select a conversation to start chatting.</p>
+        </div>
+      );
+    }
 
-  return (
-    <div className="flex flex-col h-full">
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1">
-        <header className="p-4 border-b bg-card">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Users className="h-6 w-6 text-primary" />
-              <h1 className="text-xl font-semibold">Friends</h1>
-            </div>
-            <AddFriendInput onAddFriend={handleAddFriend} />
-          </div>
-          <TabsList className="mt-4">
-            <TabsTrigger value="all">All ({friends.length})</TabsTrigger>
-            <TabsTrigger value="pending">Pending ({pendingReceived.length + pendingSent.length})</TabsTrigger>
-            <TabsTrigger value="dms">Messages ({directMessages.length})</TabsTrigger>
-          </TabsList>
-        </header>
+    if (activeView === 'all_friends') {
+      return (
+        <ScrollArea className="flex-1 p-4">
+          <h2 className="text-xl font-semibold mb-4 text-foreground">All Friends ({friends.length})</h2>
+          {friends.length > 0 ? (
+            <ul className="space-y-2">
+              {friends.map(friend => (
+                <UserListItem
+                  key={friend.id}
+                  user={friend}
+                  currentUser={currentUser}
+                  type="friend"
+                  onMessage={() => joinRoom(startDirectMessage(friend.id) && `dm_${[currentUser.id, friend.id].sort().join('_')}`)} // joinRoom expects roomId
+                  onRemoveFriend={() => removeFriend(friend.id)}
+                />
+              ))}
+            </ul>
+          ) : (
+            <p className="text-muted-foreground text-center py-8">You have no friends yet. Try adding some!</p>
+          )}
+        </ScrollArea>
+      );
+    }
 
-        <ScrollArea className="flex-1">
-          <TabsContent value="all" className="p-4 m-0">
-            {friends.length > 0 ? (
-              <ul className="space-y-2">
-                {friends.map(friend => (
+    if (activeView === 'pending_requests') {
+      return (
+        <ScrollArea className="flex-1 p-4">
+          <h2 className="text-xl font-semibold mb-4 text-foreground">Pending Requests ({pendingReceived.length + pendingSent.length})</h2>
+          {pendingReceived.length > 0 && (
+            <>
+              <h3 className="text-sm font-semibold text-muted-foreground mb-2">
+                INCOMING FRIEND REQUESTS — {pendingReceived.length}
+              </h3>
+              <ul className="space-y-2 mb-6">
+                {pendingReceived.map(requestUser => (
                   <UserListItem
-                    key={friend.id}
-                    user={friend}
+                    key={requestUser.id}
+                    user={requestUser}
                     currentUser={currentUser}
-                    type="friend"
-                    onMessage={() => startDirectMessage(friend.id)}
-                    onRemoveFriend={() => removeFriend(friend.id)}
+                    type="pending-received"
+                    onAcceptRequest={() => acceptFriendRequest(requestUser.id)}
+                    onDeclineRequest={() => declineOrCancelFriendRequest(requestUser.id)}
                   />
                 ))}
               </ul>
-            ) : (
-              <p className="text-muted-foreground text-center py-8">You have no friends yet. Try adding some!</p>
-            )}
-          </TabsContent>
-
-          <TabsContent value="pending" className="p-4 m-0">
-            {pendingReceived.length > 0 && (
-              <>
-                <h2 className="text-sm font-semibold text-muted-foreground mb-2">
-                  INCOMING FRIEND REQUESTS — {pendingReceived.length}
-                </h2>
-                <ul className="space-y-2 mb-6">
-                  {pendingReceived.map(requestUser => (
-                    <UserListItem
-                      key={requestUser.id}
-                      user={requestUser}
-                      currentUser={currentUser}
-                      type="pending-received"
-                      onAcceptRequest={() => acceptFriendRequest(requestUser.id)}
-                      onDeclineRequest={() => declineOrCancelFriendRequest(requestUser.id)}
-                    />
-                  ))}
-                </ul>
-              </>
-            )}
-            {pendingSent.length > 0 && (
-               <>
-                <h2 className="text-sm font-semibold text-muted-foreground mb-2">
-                  OUTGOING FRIEND REQUESTS — {pendingSent.length}
-                </h2>
-                <ul className="space-y-2">
-                  {pendingSent.map(requestUser => (
-                    <UserListItem
-                      key={requestUser.id}
-                      user={requestUser}
-                      currentUser={currentUser}
-                      type="pending-sent"
-                      onCancelRequest={() => declineOrCancelFriendRequest(requestUser.id)}
-                    />
-                  ))}
-                </ul>
-              </>
-            )}
-            {pendingReceived.length === 0 && pendingSent.length === 0 && (
-              <p className="text-muted-foreground text-center py-8">No pending friend requests.</p>
-            )}
-          </TabsContent>
-
-          <TabsContent value="dms" className="p-0 m-0"> {/* Removed padding here as DMList might have its own */}
-            {directMessages.length > 0 ? (
-              <DirectMessageList />
-            ) : (
-              <div className="text-muted-foreground text-center py-8 px-4">
-                <MessagesSquare className="mx-auto h-12 w-12 opacity-50 mb-2" />
-                No active direct messages. <br/> Start a conversation with a friend!
-              </div>
-            )}
-          </TabsContent>
+            </>
+          )}
+          {pendingSent.length > 0 && (
+             <>
+              <h3 className="text-sm font-semibold text-muted-foreground mb-2">
+                OUTGOING FRIEND REQUESTS — {pendingSent.length}
+              </h3>
+              <ul className="space-y-2">
+                {pendingSent.map(requestUser => (
+                  <UserListItem
+                    key={requestUser.id}
+                    user={requestUser}
+                    currentUser={currentUser}
+                    type="pending-sent"
+                    onCancelRequest={() => declineOrCancelFriendRequest(requestUser.id)}
+                  />
+                ))}
+              </ul>
+            </>
+          )}
+          {pendingReceived.length === 0 && pendingSent.length === 0 && (
+            <p className="text-muted-foreground text-center py-8">No pending friend requests.</p>
+          )}
         </ScrollArea>
-      </Tabs>
+      );
+    }
+    return null;
+  };
+
+  return (
+    <div className="flex h-full w-full">
+      {/* Left Panel */}
+      <div className="w-72 flex-shrink-0 border-r bg-card flex flex-col">
+        <div className="p-4 border-b">
+          <AddFriendInput onAddFriend={handleAddFriend} />
+        </div>
+        <div className="p-2 space-y-1 border-b">
+          <Button
+            variant={activeView === 'all_friends' ? "secondary" : "ghost"}
+            className={cn("w-full justify-start", activeView === 'all_friends' && "bg-primary/10 text-primary")}
+            onClick={() => setActiveView('all_friends')}
+          >
+            <Users className="mr-2 h-5 w-5" /> All Friends
+          </Button>
+          <Button
+            variant={activeView === 'pending_requests' ? "secondary" : "ghost"}
+            className={cn("w-full justify-start", activeView === 'pending_requests' && "bg-primary/10 text-primary")}
+            onClick={() => setActiveView('pending_requests')}
+          >
+            <Hourglass className="mr-2 h-5 w-5" /> Pending
+          </Button>
+        </div>
+        <div className="p-2">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-2 mb-1">Direct Messages</h3>
+        </div>
+        <ScrollArea className="flex-1 min-h-0">
+          {/* DirectMessageList will call joinRoom, which sets currentRoom.
+              The useEffect above will then set activeView to 'dm_chat'. */}
+          <DirectMessageList />
+        </ScrollArea>
+      </div>
+
+      {/* Right Panel */}
+      <div className="flex-1 flex flex-col bg-background">
+        {renderRightPanelContent()}
+      </div>
     </div>
   );
 }

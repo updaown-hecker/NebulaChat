@@ -18,7 +18,7 @@ import {
   LOCAL_STORAGE_UNREAD_ROOM_IDS_KEY
 } from '@/lib/constants';
 import { useToast } from '@/hooks/use-toast';
-import { useRouter } from 'next/navigation'; // Import useRouter
+import { useRouter, usePathname } from 'next/navigation'; // Import useRouter and usePathname
 
 interface ChatContextType {
   rooms: Room[];
@@ -68,6 +68,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   const { user, updateUser: updateAuthUser } = useAuth(); // Added updateAuthUser
   const { toast } = useToast();
   const router = useRouter(); // Initialize router
+  const pathname = usePathname(); // Get current pathname
   const [rooms, setRooms] = useLocalStorage<Room[]>(LOCAL_STORAGE_ROOMS_KEY, []);
   const [messages, setMessages] = useLocalStorage<Message[]>(LOCAL_STORAGE_MESSAGES_KEY, []);
   const [allUsers, setAllUsers] = useLocalStorage<User[]>('nebulaChatAllUsers', []);
@@ -315,9 +316,15 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
                 console.error("Failed to sync public room membership update to server (simulation):", error)
             );
         }
-        router.push('/chat'); // Navigate to chat page
+        // Conditional navigation:
+        // If joining a group room, or if currently not on /chat/friends page, navigate to /chat.
+        // If joining a DM and already on /chat/friends, stay on /chat/friends.
+        const isDmRoom = roomToJoin.id.startsWith('dm_');
+        if (!isDmRoom || pathname !== '/chat/friends') {
+            router.push('/chat');
+        }
     }
-  }, [user, rooms, setRooms, setCurrentRoom, setLastActiveRoomId, setUnreadRoomIds, toast, router]);
+  }, [user, rooms, setRooms, setCurrentRoom, setLastActiveRoomId, setUnreadRoomIds, toast, router, pathname]);
 
   useEffect(() => {
     if (isLoadingInitialData || rooms.length === 0) return;
@@ -332,10 +339,20 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     }
 
     if (!roomToAutoJoin && rooms.length > 0) {
-        roomToAutoJoin = rooms.find(r => r.id === 'general' && (!r.isPrivate || (user && r.members.includes(user.id)))) ||
+        // Prioritize non-DM rooms if not already in a DM context (i.e., not on /chat/friends)
+        if (pathname !== '/chat/friends') {
+            roomToAutoJoin = rooms.find(r => r.id === 'general' && !r.id.startsWith('dm_') && (!r.isPrivate || (user && r.members.includes(user.id)))) ||
+                             rooms.find(r => !r.id.startsWith('dm_') && !r.isPrivate && (user ? r.members.includes(user.id) : true)) ||
+                             rooms.find(r => !r.id.startsWith('dm_') && user && r.members.includes(user.id)) ||
+                             rooms.find(r => !r.id.startsWith('dm_'));
+        }
+        // If still no room, or on /chat/friends, consider any room
+        if (!roomToAutoJoin) {
+             roomToAutoJoin = rooms.find(r => r.id === 'general' && (!r.isPrivate || (user && r.members.includes(user.id)))) ||
                          rooms.find(r => !r.isPrivate && (user ? r.members.includes(user.id) : true)) ||
                          rooms.find(r => user && r.members.includes(user.id)) ||
                          rooms[0]; 
+        }
     }
     
     if (roomToAutoJoin && (!currentRoom || currentRoom.id !== roomToAutoJoin.id)) {
@@ -344,18 +361,18 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         } else if (currentRoom && (!currentRoom.isPrivate || (user && currentRoom.members.includes(user.id)))) {
             // Current room is still valid, do nothing
         } else {
-            const firstPublic = rooms.find(r => !r.isPrivate);
-            if (firstPublic) joinRoom(firstPublic.id);
+            const firstPublicValidRoom = rooms.find(r => !r.isPrivate && (!r.id.startsWith('dm_') || pathname === '/chat/friends'));
+            if (firstPublicValidRoom) joinRoom(firstPublicValidRoom.id);
         }
     } else if (!roomToAutoJoin && currentRoom) {
+        // If current room is invalid (e.g. private and user no longer member)
         if (currentRoom.isPrivate && user && !currentRoom.members.includes(user.id)) {
-            const firstPublic = rooms.find(r => !r.isPrivate);
-            if (firstPublic) joinRoom(firstPublic.id); else setCurrentRoom(null);
+            const firstPublicValidRoom = rooms.find(r => !r.isPrivate && (!r.id.startsWith('dm_') || pathname === '/chat/friends'));
+            if (firstPublicValidRoom) joinRoom(firstPublicValidRoom.id); else setCurrentRoom(null);
         }
     }
 
-
-  }, [isLoadingInitialData, rooms, lastActiveRoomId, currentRoom, joinRoom, setLastActiveRoomId, user]);
+  }, [isLoadingInitialData, rooms, lastActiveRoomId, currentRoom, joinRoom, setLastActiveRoomId, user, pathname]);
 
 
   const createRoom = useCallback(async (name: string, isPrivate: boolean): Promise<Room | null> => {
