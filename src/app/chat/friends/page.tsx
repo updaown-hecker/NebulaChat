@@ -1,15 +1,16 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { useChat } from '@/contexts/chat-context';
-import type { User } from '@/types';
+import type { User, Room } from '@/types';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from '@/components/ui/button';
-import { UserPlus, Users, MailWarning, CheckCircle, XCircle, Hourglass } from 'lucide-react';
+import { UserPlus, Users, MailWarning, CheckCircle, XCircle, Hourglass, MessagesSquare } from 'lucide-react';
 import { AddFriendInput } from '@/components/friends/add-friend-input';
 import { UserListItem } from '@/components/friends/user-list-item';
+import { DirectMessageList } from '@/components/dms/direct-message-list'; // Import DM List
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
@@ -17,6 +18,7 @@ export default function FriendsPage() {
   const { user: currentUser } = useAuth();
   const {
     allUsers,
+    rooms, // Get all rooms to filter DMs
     sendFriendRequest,
     acceptFriendRequest,
     declineOrCancelFriendRequest,
@@ -31,6 +33,28 @@ export default function FriendsPage() {
     refreshAllUsers();
   }, [currentUser, refreshAllUsers]);
 
+  const friends = useMemo(() => {
+    if (!currentUser) return [];
+    return allUsers.filter(u => currentUser.friendIds?.includes(u.id));
+  }, [allUsers, currentUser]);
+
+  const pendingReceived = useMemo(() => {
+    if (!currentUser) return [];
+    return allUsers.filter(u => currentUser.pendingFriendRequestsReceived?.includes(u.id));
+  }, [allUsers, currentUser]);
+
+  const pendingSent = useMemo(() => {
+    if (!currentUser) return [];
+    return allUsers.filter(u => currentUser.sentFriendRequests?.includes(u.id));
+  }, [allUsers, currentUser]);
+
+  const directMessages = useMemo(() => {
+    if (!currentUser) return [];
+    return rooms.filter(room => 
+      room.id.startsWith('dm_') && room.members.includes(currentUser.id)
+    );
+  }, [rooms, currentUser]);
+
   if (!currentUser) {
     return (
       <div className="flex-1 p-6 flex items-center justify-center">
@@ -38,10 +62,6 @@ export default function FriendsPage() {
       </div>
     );
   }
-
-  const friends = allUsers.filter(u => currentUser.friendIds?.includes(u.id));
-  const pendingReceived = allUsers.filter(u => currentUser.pendingFriendRequestsReceived?.includes(u.id));
-  const pendingSent = allUsers.filter(u => currentUser.sentFriendRequests?.includes(u.id));
 
   const handleAddFriend = async (username: string) => {
     const targetUser = allUsers.find(u => u.username.toLowerCase() === username.toLowerCase() && u.id !== currentUser.id);
@@ -61,7 +81,6 @@ export default function FriendsPage() {
 
   return (
     <div className="flex flex-col h-full">
-      {/* The Tabs component now wraps both the header (with TabsList) and the ScrollArea (with TabsContent) */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1">
         <header className="p-4 border-b bg-card">
           <div className="flex items-center justify-between">
@@ -74,6 +93,7 @@ export default function FriendsPage() {
           <TabsList className="mt-4">
             <TabsTrigger value="all">All ({friends.length})</TabsTrigger>
             <TabsTrigger value="pending">Pending ({pendingReceived.length + pendingSent.length})</TabsTrigger>
+            <TabsTrigger value="dms">Messages ({directMessages.length})</TabsTrigger>
           </TabsList>
         </header>
 
@@ -137,6 +157,17 @@ export default function FriendsPage() {
             )}
             {pendingReceived.length === 0 && pendingSent.length === 0 && (
               <p className="text-muted-foreground text-center py-8">No pending friend requests.</p>
+            )}
+          </TabsContent>
+
+          <TabsContent value="dms" className="p-0 m-0"> {/* Removed padding here as DMList might have its own */}
+            {directMessages.length > 0 ? (
+              <DirectMessageList />
+            ) : (
+              <div className="text-muted-foreground text-center py-8 px-4">
+                <MessagesSquare className="mx-auto h-12 w-12 opacity-50 mb-2" />
+                No active direct messages. <br/> Start a conversation with a friend!
+              </div>
             )}
           </TabsContent>
         </ScrollArea>

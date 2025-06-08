@@ -4,7 +4,7 @@
 import React from 'react';
 import { FriendsNavigationItem } from '@/components/friends/friends-navigation-item';
 import { RoomList } from '@/components/rooms/room-list';
-import { DirectMessageList } from '@/components/dms/direct-message-list'; // New import
+// Removed: import { DirectMessageList } from '@/components/dms/direct-message-list';
 import { CreateRoomDialog } from '@/components/rooms/create-room-dialog';
 import { Separator } from '@/components/ui/separator';
 
@@ -29,15 +29,7 @@ export function LeftSidebar() {
          <RoomList />
       </div>
 
-      <Separator /> 
-
-      {/* Direct Messages Section */}
-      <div className="p-4">
-        <h2 className="text-lg font-semibold font-headline mb-2">Direct Messages</h2>
-      </div>
-      <div className="flex-grow overflow-y-auto">
-        <DirectMessageList />
-      </div>
+      {/* Direct Messages Section Removed from here */}
     </div>
   );
 }
