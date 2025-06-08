@@ -2,7 +2,8 @@
 [
   {
     "id": "user1",
-    "username": "Alice",
+    "username": "admin",
+    "password": "admin123",
     "isTypingInRoomId": null,
     "friendIds": [],
     "pendingFriendRequestsReceived": [],
@@ -41,3 +42,4 @@
     "isAdmin": false
   }
 ]
+
