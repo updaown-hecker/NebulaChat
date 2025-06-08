@@ -5,7 +5,8 @@
     "userId": "guest1",
     "username": "Guest User",
     "content": "Anyone here?",
-    "timestamp": 1749334928421
+    "timestamp": 1749334928421,
+    "isEdited": false
   },
   {
     "id": "msg-1749335238237",
@@ -13,7 +14,8 @@
     "userId": "user-1749334881349",
     "username": "updaown",
     "content": "Hii",
-    "timestamp": 1749335238237
+    "timestamp": 1749335238237,
+    "isEdited": false
   },
   {
     "id": "msg-1749335247221",
@@ -21,7 +23,8 @@
     "userId": "user-1749334881349",
     "username": "updaown",
     "content": "No",
-    "timestamp": 1749335247221
+    "timestamp": 1749335247221,
+    "isEdited": false
   },
   {
     "id": "msg-1749335438134",
@@ -29,7 +32,8 @@
     "userId": "user-1749334881349",
     "username": "updaown",
     "content": "Hi",
-    "timestamp": 1749335438134
+    "timestamp": 1749335438134,
+    "isEdited": false
   },
   {
     "id": "msg-1749335441215",
@@ -37,7 +41,8 @@
     "userId": "user-1749334881349",
     "username": "updaown",
     "content": "Hi",
-    "timestamp": 1749335441215
+    "timestamp": 1749335441215,
+    "isEdited": false
   },
   {
     "id": "msg-1749335446039",
@@ -45,7 +50,8 @@
     "userId": "user-1749334881349",
     "username": "updaown",
     "content": "Hi",
-    "timestamp": 1749335446039
+    "timestamp": 1749335446039,
+    "isEdited": false
   },
   {
     "id": "msg-1749335482823",
@@ -53,7 +59,8 @@
     "userId": "user-1749335479892",
     "username": "updaown1",
     "content": "Hiii",
-    "timestamp": 1749335482823
+    "timestamp": 1749335482823,
+    "isEdited": false
   },
   {
     "id": "msg-1749335602799",
@@ -61,7 +68,8 @@
     "userId": "user-1749334881349",
     "username": "updaown",
     "content": "No way there's more people here",
-    "timestamp": 1749335602799
+    "timestamp": 1749335602799,
+    "isEdited": false
   },
   {
     "id": "msg-1749336092745",
@@ -69,7 +77,8 @@
     "userId": "user-1749334881349",
     "username": "updaown",
     "content": "😀",
-    "timestamp": 1749336092745
+    "timestamp": 1749336092745,
+    "isEdited": false
   },
   {
     "id": "msg1",
@@ -77,7 +86,8 @@
     "userId": "user1",
     "username": "Alice",
     "content": "Hello from server!",
-    "timestamp": 1749336217534
+    "timestamp": 1749336217534,
+    "isEdited": false
   },
   {
     "id": "msg2",
@@ -85,7 +95,8 @@
     "userId": "user2",
     "username": "Bob",
     "content": "Hi Alice (server)!",
-    "timestamp": 1749336227534
+    "timestamp": 1749336227534,
+    "isEdited": false
   },
   {
     "id": "msg-1749336413708",
@@ -93,7 +104,8 @@
     "userId": "user-1749336395407",
     "username": "updaown",
     "content": "Hi",
-    "timestamp": 1749336413708
+    "timestamp": 1749336413708,
+    "isEdited": false
   },
   {
     "id": "msg-1749336792054-c52nz",
@@ -101,7 +113,8 @@
     "userId": "user-1749336395407",
     "username": "updaown",
     "content": "Hi",
-    "timestamp": 1749336792054
+    "timestamp": 1749336792054,
+    "isEdited": false
   },
   {
     "id": "msg-1749336813705-tirbb",
@@ -109,7 +122,8 @@
     "userId": "user-1749336395407",
     "username": "updaown",
     "content": "Hiii",
-    "timestamp": 1749336813705
+    "timestamp": 1749336813705,
+    "isEdited": false
   },
   {
     "id": "msg-1749336818446-sx258",
@@ -117,7 +131,8 @@
     "userId": "user-1749336395407",
     "username": "updaown",
     "content": "🤔",
-    "timestamp": 1749336818446
+    "timestamp": 1749336818446,
+    "isEdited": false
   },
   {
     "id": "msg-1749336829650-ts0zd",
@@ -125,7 +140,8 @@
     "userId": "user-1749334881349",
     "username": "updaown",
     "content": "Lol",
-    "timestamp": 1749336829650
+    "timestamp": 1749336829650,
+    "isEdited": false
   },
   {
     "id": "msg-1749336848682-fgu9p",
@@ -133,7 +149,8 @@
     "userId": "user-1749334881349",
     "username": "updaown",
     "content": "Hi",
-    "timestamp": 1749336848683
+    "timestamp": 1749336848683,
+    "isEdited": false
   },
   {
     "id": "msg-1749337161066-bmxic",
@@ -141,7 +158,8 @@
     "userId": "user-1749336395407",
     "username": "updaown",
     "content": "Hi",
-    "timestamp": 1749337161066
+    "timestamp": 1749337161066,
+    "isEdited": false
   },
   {
     "id": "msg-1749337391207-lbw5h",
@@ -149,7 +167,8 @@
     "userId": "user-1749337377092-9f2f7",
     "username": "updaown",
     "content": "Nig",
-    "timestamp": 1749337391207
+    "timestamp": 1749337391207,
+    "isEdited": false
   },
   {
     "id": "msg-1749340862056-9hhjc",
@@ -157,7 +176,8 @@
     "userId": "user-1749337377092-9f2f7",
     "username": "updaown",
     "content": "Nuh uh",
-    "timestamp": 1749340862056
+    "timestamp": 1749340862056,
+    "isEdited": false
   },
   {
     "id": "msg-1749341454311-k8ir7",
@@ -165,7 +185,8 @@
     "userId": "user-1749334881349",
     "username": "updaown",
     "content": "Hi",
-    "timestamp": 1749341454311
+    "timestamp": 1749341454311,
+    "isEdited": false
   },
   {
     "id": "msg-1749342895724-oso38",
@@ -173,7 +194,8 @@
     "userId": "user-1749337377092-9f2f7",
     "username": "updaown",
     "content": "Hi",
-    "timestamp": 1749342895724
+    "timestamp": 1749342895724,
+    "isEdited": false
   },
   {
     "id": "msg-1749342941638-yll91",
@@ -181,7 +203,8 @@
     "userId": "user-1749334881349",
     "username": "updaown",
     "content": "Hi",
-    "timestamp": 1749342941639
+    "timestamp": 1749342941639,
+    "isEdited": false
   },
   {
     "id": "msg-1749342948933-awbvv",
@@ -189,7 +212,8 @@
     "userId": "user-1749337377092-9f2f7",
     "username": "updaown",
     "content": "Who are u",
-    "timestamp": 1749342948933
+    "timestamp": 1749342948933,
+    "isEdited": false
   },
   {
     "id": "msg-1749342965425-5yjvp",
@@ -197,7 +221,8 @@
     "userId": "user-1749334881349",
     "username": "updaown",
     "content": "No",
-    "timestamp": 1749342965425
+    "timestamp": 1749342965425,
+    "isEdited": false
   },
   {
     "id": "msg-1749343176043-3mftn",
@@ -205,7 +230,8 @@
     "userId": "user-1749343151620-twocj",
     "username": "Ben",
     "content": "Hiii",
-    "timestamp": 1749343176043
+    "timestamp": 1749343176043,
+    "isEdited": false
   },
   {
     "id": "msg-1749343670593-kms92",
@@ -213,6 +239,7 @@
     "userId": "user1",
     "username": "admin",
     "content": "Hi",
-    "timestamp": 1749343670593
+    "timestamp": 1749343670593,
+    "isEdited": false
   }
 ]

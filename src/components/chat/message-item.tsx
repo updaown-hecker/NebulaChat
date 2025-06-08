@@ -8,7 +8,7 @@ import { useChat } from '@/contexts/chat-context';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button'; // Added buttonVariants import
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -57,7 +57,7 @@ export function MessageItem({ message }: MessageItemProps) {
     setShowDeleteConfirm(false);
   };
 
-  const displayTimestamp = message.isEdited && message.editedTimestamp 
+  const displayTimestamp = message.isEdited && message.editedTimestamp
     ? formatDistanceToNow(new Date(message.editedTimestamp), { addSuffix: true })
     : formatDistanceToNow(new Date(message.timestamp), { addSuffix: true });
 
