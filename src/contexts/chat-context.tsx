@@ -96,14 +96,22 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       const serverData = await fetchChatData();
       if (serverData) {
         if (serverData.users) setAllUsers(serverData.users);
+        // Important: setRooms with the full list from the server for data integrity if syncing all rooms.
+        // Filtering for display should happen in components like RoomList.
         if (serverData.rooms) {
             setRooms(serverData.rooms);
+            // Update currentRoom based on the latest full list
             if (currentRoomRef.current) {
                 const updatedCurrentRoom = serverData.rooms.find(r => r.id === currentRoomRef.current!.id);
                 if (updatedCurrentRoom) {
-                    setCurrentRoom(updatedCurrentRoom);
-                } else {
-                    setCurrentRoom(serverData.rooms.length > 0 ? serverData.rooms[0] : null);
+                    // Ensure current user is still a member if it's private
+                    if (updatedCurrentRoom.isPrivate && user && !updatedCurrentRoom.members.includes(user.id)) {
+                        setCurrentRoom(serverData.rooms.find(r => !r.isPrivate) || serverData.rooms[0] || null);
+                    } else {
+                        setCurrentRoom(updatedCurrentRoom);
+                    }
+                } else { // Current room no longer exists or user lost access
+                    setCurrentRoom(serverData.rooms.find(r => !r.isPrivate) || serverData.rooms[0] || null);
                 }
             }
         }
@@ -118,7 +126,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         toast({ title: "Error", description: "Could not refresh chat data.", variant: "destructive" });
       }
     }
-  }, [setAllUsers, setRooms, setMessages, toast]);
+  }, [setAllUsers, setRooms, setMessages, toast, user]);
 
 
   const refreshAllUsers = useCallback(async () => {
@@ -137,8 +145,6 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   const fetchAndUpdateChatData = useCallback(async (isInitialLoad = false) => {
     try {
       const serverData = await fetchChatData();
-      let roomsToSyncOnServer: Room[] | null = null;
-      let messagesToSyncOnServer: Message[] | null = null;
       let usersToUpdateLocally: User[] | null = null;
 
       if (serverData) {
@@ -147,87 +153,68 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
              usersToUpdateLocally = serverData.users;
           }
         }
-
+        
         if (serverData.rooms) {
-          setRooms(prevLocalRooms => {
-            const localRoomIds = new Set(prevLocalRooms.map(r => r.id));
-            const newRoomsFromServer = serverData.rooms.filter(sr => !localRoomIds.has(sr.id));
-            const serverRoomIds = new Set(serverData.rooms.map(r => r.id));
-            const roomsMerged = [
-              ...serverData.rooms, 
-              ...prevLocalRooms.filter(lr => !serverRoomIds.has(lr.id)) 
-            ].sort((a,b) => (a.name || "").localeCompare(b.name || ""));
-
-
-            if (newRoomsFromServer.length > 0 || prevLocalRooms.length !== roomsMerged.length || JSON.stringify(roomsMerged) !== JSON.stringify(prevLocalRooms)) {
-              roomsToSyncOnServer = roomsMerged;
-              return roomsMerged;
-            }
-            return prevLocalRooms;
-          });
+          if (JSON.stringify(serverData.rooms) !== JSON.stringify(rooms)) {
+            setRooms(serverData.rooms); 
+          }
         }
 
+
         if (serverData.messages) {
-          setMessages(prevLocalMessages => {
-            const localMessageIds = new Set(prevLocalMessages.map(m => m.id));
-            const newMessagesFromServer = serverData.messages.filter(sm => !localMessageIds.has(sm.id));
+          const localMessageIds = new Set(messages.map(m => m.id));
+          const newMessagesFromServer = serverData.messages.filter(sm => !localMessageIds.has(sm.id));
 
-            newMessagesFromServer.forEach(newMessage => {
-              if (newMessage.roomId !== currentRoomRef.current?.id && (!user || newMessage.userId !== user.id)) {
-                setUnreadRoomIds(prevUnread => ({ ...prevUnread, [newMessage.roomId]: true }));
-              }
-            });
-
-            const serverMessageIds = new Set(serverData.messages.map(m => m.id));
-            const messagesMerged = [
-                ...serverData.messages,
-                ...prevLocalMessages.filter(lm => !serverMessageIds.has(lm.id))
-            ].sort((a, b) => a.timestamp - b.timestamp);
-
-            if (newMessagesFromServer.length > 0 || prevLocalMessages.length !== messagesMerged.length || JSON.stringify(messagesMerged) !== JSON.stringify(prevLocalMessages)) {
-              messagesToSyncOnServer = messagesMerged;
-              return messagesMerged;
+          newMessagesFromServer.forEach(newMessage => {
+            if (newMessage.roomId !== currentRoomRef.current?.id && (!user || newMessage.userId !== user.id)) {
+              setUnreadRoomIds(prevUnread => ({ ...prevUnread, [newMessage.roomId]: true }));
             }
-            return prevLocalMessages;
           });
+          
+          if (JSON.stringify(serverData.messages.sort((a,b)=>a.timestamp-b.timestamp)) !== JSON.stringify(messages.sort((a,b)=>a.timestamp-b.timestamp))) {
+            setMessages(serverData.messages);
+          }
         }
         
         if (usersToUpdateLocally) {
           setAllUsers(usersToUpdateLocally);
         }
-        if (roomsToSyncOnServer) {
-          await syncRoomsToServer({ rooms: roomsToSyncOnServer });
-        }
-        if (messagesToSyncOnServer) {
-          await syncMessagesToServer({ messages: messagesToSyncOnServer });
-        }
-
+        
         if (isInitialLoad) {
-           const currentRoomsList = roomsToSyncOnServer || serverData.rooms || rooms;
+           const currentRoomsList = serverData.rooms || rooms; 
+           let roomToAutoJoin: Room | null = null;
+
            if (lastActiveRoomId) {
             const roomToRestore = currentRoomsList.find(r => r.id === lastActiveRoomId);
             if (roomToRestore) {
-              if (!currentRoomRef.current || currentRoomRef.current.id !== roomToRestore.id) {
-                 setCurrentRoom(roomToRestore);
-                 setUnreadRoomIds(prevUnread => ({ ...prevUnread, [roomToRestore.id]: false }));
-              }
+                if (!roomToRestore.isPrivate || (user && roomToRestore.members.includes(user.id))) {
+                    roomToAutoJoin = roomToRestore;
+                } else {
+                    setLastActiveRoomId(null); 
+                }
             } else {
-              setLastActiveRoomId(null);
-              if (currentRoomsList.length > 0 && !currentRoomRef.current) {
-                setCurrentRoom(currentRoomsList[0]);
-                setLastActiveRoomId(currentRoomsList[0].id);
-                setUnreadRoomIds(prevUnread => ({ ...prevUnread, [currentRoomsList[0].id]: false }));
-              }
+              setLastActiveRoomId(null); 
             }
-          } else if (currentRoomsList.length > 0 && !currentRoomRef.current) {
-             setCurrentRoom(currentRoomsList[0]);
-             setLastActiveRoomId(currentRoomsList[0].id);
-             setUnreadRoomIds(prevUnread => ({ ...prevUnread, [currentRoomsList[0].id]: false }));
+          }
+          
+          if (!roomToAutoJoin && currentRoomsList.length > 0) {
+             roomToAutoJoin = currentRoomsList.find(r => !r.isPrivate && (user ? r.members.includes(user.id) : true)) || 
+                              currentRoomsList.find(r => user && r.members.includes(user.id)) || 
+                              currentRoomsList[0];
+          }
+
+          if (roomToAutoJoin && (!currentRoomRef.current || currentRoomRef.current.id !== roomToAutoJoin.id)) {
+             setCurrentRoom(roomToAutoJoin);
+             setLastActiveRoomId(roomToAutoJoin.id);
+             setUnreadRoomIds(prevUnread => ({ ...prevUnread, [roomToAutoJoin!.id]: false }));
+          } else if (!roomToAutoJoin && currentRoomsList.length === 0) {
+             setCurrentRoom(null); 
           }
         }
-      } else if (isInitialLoad) {
+      } else if (isInitialLoad) { 
         if (rooms.length === 0) setRooms(DEFAULT_INITIAL_ROOMS);
         if (messages.length === 0) setMessages(DEFAULT_INITIAL_MESSAGES);
+        if (allUsers.length === 0 && user) setAllUsers([user]);
       }
     } catch (error) {
       console.error("Failed to fetch/update chat data from server (simulation):", error);
@@ -240,12 +227,12 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         setIsLoadingInitialData(false);
       }
     }
-  }, [user?.id, lastActiveRoomId, setLastActiveRoomId, setRooms, setMessages, setAllUsers, setUnreadRoomIds, rooms, allUsers]);
+  }, [user, lastActiveRoomId, setLastActiveRoomId, setRooms, rooms, setMessages, messages, setAllUsers, allUsers, setUnreadRoomIds]);
 
   useEffect(() => {
     fetchAndUpdateChatData(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [user?.id]); 
 
   useEffect(() => {
     if (isLoadingInitialData) return;
@@ -257,7 +244,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (currentRoom && allUsers.length > 0) {
-      const usersInRoom = allUsers.filter(u => currentRoom.members.includes(u.id) || u.id === user?.id);
+      const usersInRoom = allUsers.filter(u => currentRoom.members.includes(u.id));
       setOnlineUsers(usersInRoom);
 
       const currentTypingUsers = allUsers.filter(
@@ -291,49 +278,64 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
 
 
   const joinRoom = useCallback((roomId: string) => {
-    let roomsToSync: Room[] | null = null;
-    setRooms(currentLocalRooms => {
-        const roomToJoin = currentLocalRooms.find(r => r.id === roomId);
-        if (roomToJoin) {
-            setCurrentRoom(roomToJoin);
-            setLastActiveRoomId(roomToJoin.id);
-            setUnreadRoomIds(prevUnread => ({ ...prevUnread, [roomId]: false }));
-
-            let updatedLocalRooms = currentLocalRooms;
-            if (user && (!roomToJoin.isPrivate || roomToJoin.id.startsWith('dm_')) && !roomToJoin.members.includes(user.id)) {
-                updatedLocalRooms = currentLocalRooms.map(r =>
-                    r.id === roomId ? { ...r, members: [...r.members, user.id] } : r
-                );
-                roomsToSync = updatedLocalRooms;
-            }
-            return updatedLocalRooms;
+    const roomToJoin = rooms.find(r => r.id === roomId);
+    if (roomToJoin) {
+        if (roomToJoin.isPrivate && user && !roomToJoin.members.includes(user.id)) {
+            toast({title: "Access Denied", description: "You are not a member of this private room.", variant: "destructive"});
+            return;
         }
-        return currentLocalRooms;
-    });
-    if (roomsToSync) {
-        syncRoomsToServer({ rooms: roomsToSync }).catch(error =>
-            console.error("Failed to sync room membership update to server (simulation):", error)
-        );
+        setCurrentRoom(roomToJoin);
+        setLastActiveRoomId(roomToJoin.id);
+        setUnreadRoomIds(prevUnread => ({ ...prevUnread, [roomId]: false }));
+
+        if (user && !roomToJoin.isPrivate && !roomToJoin.members.includes(user.id)) {
+            const updatedRoom = { ...roomToJoin, members: [...roomToJoin.members, user.id] };
+            const updatedRoomsList = rooms.map(r => r.id === roomId ? updatedRoom : r);
+            setRooms(updatedRoomsList);
+            syncRoomsToServer({ rooms: updatedRoomsList }).catch(error =>
+                console.error("Failed to sync public room membership update to server (simulation):", error)
+            );
+        }
     }
-  }, [user, setRooms, setCurrentRoom, setLastActiveRoomId, setUnreadRoomIds]);
+  }, [user, rooms, setRooms, setCurrentRoom, setLastActiveRoomId, setUnreadRoomIds, toast]);
 
   useEffect(() => {
     if (isLoadingInitialData || rooms.length === 0) return;
-    const targetRoomId = lastActiveRoomId || (rooms.length > 0 ? rooms[0].id : null);
-    if (targetRoomId) {
-        const roomToJoinDetails = rooms.find(r => r.id === targetRoomId);
-        if (roomToJoinDetails) {
-            if (!currentRoom || currentRoom.id !== roomToJoinDetails.id) {
-                joinRoom(roomToJoinDetails.id);
-            }
-        } else if (lastActiveRoomId) {
+    
+    let roomToAutoJoin: Room | null = null;
+    if (lastActiveRoomId) {
+        roomToAutoJoin = rooms.find(r => r.id === lastActiveRoomId) || null;
+        if (roomToAutoJoin && roomToAutoJoin.isPrivate && user && !roomToAutoJoin.members.includes(user.id)) {
+            roomToAutoJoin = null; 
             setLastActiveRoomId(null);
-            if (rooms.length > 0 && (!currentRoom || !rooms.find(r => r.id === currentRoom.id))) {
-              joinRoom(rooms[0].id);
-            }
         }
     }
-  }, [isLoadingInitialData, rooms, lastActiveRoomId, currentRoom, joinRoom, setLastActiveRoomId]);
+
+    if (!roomToAutoJoin && rooms.length > 0) {
+        roomToAutoJoin = rooms.find(r => r.id === 'general' && (!r.isPrivate || (user && r.members.includes(user.id)))) ||
+                         rooms.find(r => !r.isPrivate && (user ? r.members.includes(user.id) : true)) ||
+                         rooms.find(r => user && r.members.includes(user.id)) ||
+                         rooms[0]; 
+    }
+    
+    if (roomToAutoJoin && (!currentRoom || currentRoom.id !== roomToAutoJoin.id)) {
+        if (!roomToAutoJoin.isPrivate || (user && roomToAutoJoin.members.includes(user.id))) {
+            joinRoom(roomToAutoJoin.id);
+        } else if (currentRoom && (!currentRoom.isPrivate || (user && currentRoom.members.includes(user.id)))) {
+            // Current room is still valid, do nothing
+        } else {
+            const firstPublic = rooms.find(r => !r.isPrivate);
+            if (firstPublic) joinRoom(firstPublic.id);
+        }
+    } else if (!roomToAutoJoin && currentRoom) {
+        if (currentRoom.isPrivate && user && !currentRoom.members.includes(user.id)) {
+            const firstPublic = rooms.find(r => !r.isPrivate);
+            if (firstPublic) joinRoom(firstPublic.id); else setCurrentRoom(null);
+        }
+    }
+
+
+  }, [isLoadingInitialData, rooms, lastActiveRoomId, currentRoom, joinRoom, setLastActiveRoomId, user]);
 
 
   const createRoom = useCallback(async (name: string, isPrivate: boolean): Promise<Room | null> => {
@@ -345,26 +347,28 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       members: [user.id], 
       ownerId: user.id,
     };
-    let roomsToSync: Room[] | null = null;
-    setRooms(prevRooms => {
-        const updatedRoomsList = [...prevRooms, newRoom];
-        roomsToSync = updatedRoomsList;
-        return updatedRoomsList;
-    });
-    if (roomsToSync) {
-        syncRoomsToServer({ rooms: roomsToSync }).catch(error =>
-          console.error("Failed to sync rooms with server (simulation):", error)
-        );
+
+    const updatedRoomsList = [...rooms, newRoom];
+    setRooms(updatedRoomsList); 
+    
+    try {
+        await syncRoomsToServer({ rooms: updatedRoomsList });
+        joinRoom(newRoom.id);
+        return newRoom;
+    } catch (error) {
+        console.error("Failed to sync new room with server (simulation):", error);
+        toast({title: "Error", description: "Could not save new room to server.", variant: "destructive"});
+        setRooms(rooms); 
+        return null;
     }
-    joinRoom(newRoom.id);
-    return newRoom;
-  }, [user, setRooms, joinRoom]);
+  }, [user, rooms, setRooms, joinRoom, toast]);
 
   const startDirectMessage = useCallback(async (otherUserId: string) => {
     if (!user) return;
     const otherUser = allUsers.find(u => u.id === otherUserId);
     if (!otherUser) {
       console.error("Other user not found for DM");
+      toast({title: "Error", description: "User to DM not found.", variant: "destructive"});
       return;
     }
 
@@ -378,21 +382,21 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         id: dmRoomId,
         name: `DM: ${user.username} & ${otherUser.username}`, 
         isPrivate: true,
-        members: [user.id, otherUserId],
+        members: [user.id, otherUserId].sort(), 
         ownerId: user.id, 
       };
-      let roomsToSync: Room[] | null = null;
-      setRooms(prevRooms => {
-        const updatedRooms = [...prevRooms, newDmRoom];
-        roomsToSync = updatedRooms;
-        return updatedRooms;
-      });
-      if (roomsToSync) {
-        await syncRoomsToServer({ rooms: roomsToSync });
+      const updatedRoomsList = [...rooms, newDmRoom];
+      setRooms(updatedRoomsList);
+      try {
+        await syncRoomsToServer({ rooms: updatedRoomsList });
+        joinRoom(newDmRoom.id);
+      } catch (error) {
+        console.error("Failed to sync new DM room:", error);
+        toast({title: "Error", description: "Could not create DM room on server.", variant: "destructive"});
+        setRooms(rooms); 
       }
-      joinRoom(newDmRoom.id);
     }
-  }, [user, allUsers, rooms, joinRoom, setRooms]);
+  }, [user, allUsers, rooms, joinRoom, setRooms, toast]);
 
 
   const handleAiCommand = useCallback(async (command: string, arg: string) => {
@@ -485,16 +489,17 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         }),
       };
       addMessage(newMessage);
-      setReplyingToMessage(null); // Clear reply state after sending
+      setReplyingToMessage(null); 
     }
   }, [user, addMessage, handleAiCommand, setUserTyping, replyingToMessage]);
 
   const editMessage = useCallback(async (messageId: string, newContent: string): Promise<boolean> => {
     if (!user) return false;
-    const messageIndex = messages.findIndex(m => m.id === messageId);
+    const originalMessages = messages; // Keep a copy for potential revert
+    const messageIndex = originalMessages.findIndex(m => m.id === messageId);
     if (messageIndex === -1) return false;
 
-    const messageToEdit = messages[messageIndex];
+    const messageToEdit = originalMessages[messageIndex];
     if (messageToEdit.userId !== user.id && !user.isAdmin) {
       toast({ title: "Permission Denied", description: "You can only edit your own messages.", variant: "destructive" });
       return false;
@@ -507,24 +512,26 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       editedTimestamp: Date.now(),
     };
     
-    let messagesToSync: Message[] | null = null;
-    setMessages(prevMessages => {
-        const newMessages = [...prevMessages];
-        newMessages[messageIndex] = updatedMessage;
-        messagesToSync = newMessages;
-        return newMessages;
-    });
+    const newMessages = [...originalMessages];
+    newMessages[messageIndex] = updatedMessage;
+    setMessages(newMessages); 
 
-    if (messagesToSync) {
-      await syncMessagesToServer({ messages: messagesToSync });
+    try {
+        await syncMessagesToServer({ messages: newMessages });
+        toast({ title: "Message Edited", description: "Your message has been updated." });
+        return true;
+    } catch (error) {
+        console.error("Failed to sync edited message:", error);
+        toast({ title: "Error", description: "Could not save edited message to server.", variant: "destructive"});
+        setMessages(originalMessages); 
+        return false;
     }
-    toast({ title: "Message Edited", description: "Your message has been updated." });
-    return true;
   }, [user, messages, setMessages, toast]);
 
   const deleteMessage = useCallback(async (messageId: string): Promise<boolean> => {
     if (!user) return false;
-    const messageToDelete = messages.find(m => m.id === messageId);
+    const originalMessages = messages; // Keep a copy for potential revert
+    const messageToDelete = originalMessages.find(m => m.id === messageId);
     if (!messageToDelete) return false;
 
     if (messageToDelete.userId !== user.id && !user.isAdmin) {
@@ -532,18 +539,19 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       return false;
     }
     
-    let messagesToSync: Message[] | null = null;
-    setMessages(prevMessages => {
-        const filteredMessages = prevMessages.filter(m => m.id !== messageId);
-        messagesToSync = filteredMessages;
-        return filteredMessages;
-    });
+    const filteredMessages = originalMessages.filter(m => m.id !== messageId);
+    setMessages(filteredMessages); 
     
-    if (messagesToSync) {
-      await syncMessagesToServer({ messages: messagesToSync });
+    try {
+        await syncMessagesToServer({ messages: filteredMessages });
+        toast({ title: "Message Deleted", description: "The message has been removed." });
+        return true;
+    } catch (error) {
+        console.error("Failed to sync deleted message:", error);
+        toast({ title: "Error", description: "Could not delete message on server.", variant: "destructive"});
+        setMessages(originalMessages); 
+        return false;
     }
-    toast({ title: "Message Deleted", description: "The message has been removed." });
-    return true;
   }, [user, messages, setMessages, toast]);
 
 
@@ -629,6 +637,20 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
 
   const inviteUserToRoom = useCallback(async (roomId: string, inviteeUserId: string): Promise<boolean> => {
     if (!user) return false;
+    const roomToInviteTo = rooms.find(r => r.id === roomId);
+    if (!roomToInviteTo) {
+        toast({title: "Error", description: "Room not found.", variant: "destructive"});
+        return false;
+    }
+    if (!roomToInviteTo.isPrivate) {
+        toast({title: "Info", description: "This room is public, users can join directly."});
+        return false;
+    }
+    if (roomToInviteTo.ownerId !== user.id && !user.isAdmin) {
+        toast({title: "Permission Denied", description: "Only the room owner or an admin can invite users.", variant: "destructive"});
+        return false;
+    }
+
     try {
       const response = await inviteUserToRoomFlow({ roomId, inviterUserId: user.id, inviteeUserId });
       toast({ title: response.success ? "Success" : "Error", description: response.message, variant: response.success ? "default" : "destructive" });
@@ -644,7 +666,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       toast({ title: "Error", description: "Could not invite user to room.", variant: "destructive" });
       return false;
     }
-  }, [user, toast, setRooms, setCurrentRoom]);
+  }, [user, toast, setRooms, rooms, setCurrentRoom]);
 
 
   return (
@@ -656,7 +678,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       searchedUsers,
       onlineUsers,
       typingUsers,
-      replyingToMessage, // Added
+      replyingToMessage, 
       createRoom,
       joinRoom,
       startDirectMessage,
@@ -664,7 +686,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       editMessage,
       deleteMessage,
       setUserTyping,
-      setReplyingTo, // Added
+      setReplyingTo, 
       isLoadingAiResponse,
       isLoadingInitialData,
       unreadRoomIds,

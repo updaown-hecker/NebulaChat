@@ -19,7 +19,7 @@
     "message": "admin invited you to the private room: \"DM: admin & Ben\".",
     "link": "/chat?roomId=dm_user-1749343151620-twocj_user1",
     "timestamp": 1749350411343,
-    "isRead": false,
+    "isRead": true,
     "actorId": "user1",
     "actorUsername": "admin",
     "roomId": "dm_user-1749343151620-twocj_user1",

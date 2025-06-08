@@ -25,7 +25,7 @@
     "username": "updaown",
     "password": "1",
     "isGuest": false,
-    "isTypingInRoomId": null,
+    "isTypingInRoomId": "dm_user-1749343151620-twocj_user1",
     "friendIds": [],
     "pendingFriendRequestsReceived": [
       "user1"
