@@ -42,7 +42,9 @@ export function UserListItem({
   };
 
   return (
-    <li className="flex items-center p-3 hover:bg-muted/50 rounded-md transition-colors border-b">
+    // Removed border-b as list items are separated by space-y-2 in FriendsPage
+    // Added slight padding (p-2.5) and ensured full width for better hover effect.
+    <li className="flex items-center p-2.5 hover:bg-muted/50 rounded-md transition-colors w-full">
       <Avatar className="h-10 w-10 mr-3">
         {user.avatar && <AvatarImage src={user.avatar} alt={user.username} />}
         <AvatarFallback className={cn(user.isAdmin && "border-2 border-primary")}>{getInitials(user.username)}</AvatarFallback>

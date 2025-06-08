@@ -151,5 +151,16 @@
     "actorUsername": "updaown",
     "roomId": "room-1749357495875-9wmys",
     "roomName": "testing 3"
+  },
+  {
+    "id": "notif-1749357671301-vmx85",
+    "userId": "user-1749343151620-twocj",
+    "type": "friend_request_received",
+    "message": "updaown sent you a friend request.",
+    "link": "/chat/friends",
+    "timestamp": 1749357671301,
+    "isRead": false,
+    "actorId": "user-1749337377092-9f2f7",
+    "actorUsername": "updaown"
   }
 ]

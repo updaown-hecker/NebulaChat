@@ -111,10 +111,12 @@ export default function FriendsPage() {
     if (activeView === 'all_friends') {
       return (
         <ScrollArea className="flex-1 p-4">
-          <h2 className="text-xl font-semibold mb-4 text-foreground">All Friends ({friends.length})</h2>
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-2 mb-3">
+            All Friends — {friends.length}
+          </h3>
           {friends.length > 0 ? (
             <ul className="space-y-2">
-              {friends.map(friend => (
+              {friends.map((friend) => (
                 <UserListItem
                   key={friend.id}
                   user={friend}
@@ -135,12 +137,14 @@ export default function FriendsPage() {
     if (activeView === 'pending_requests') {
       return (
         <ScrollArea className="flex-1 p-4">
-          <h2 className="text-xl font-semibold mb-4 text-foreground">Pending Requests ({pendingReceived.length + pendingSent.length})</h2>
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-2 mb-3">
+            Pending Requests — {pendingReceived.length + pendingSent.length}
+          </h3>
           {pendingReceived.length > 0 && (
             <>
-              <h3 className="text-sm font-semibold text-muted-foreground mb-2">
-                INCOMING FRIEND REQUESTS — {pendingReceived.length}
-              </h3>
+              <h4 className="text-sm font-medium text-foreground mt-4 mb-2 px-2">
+                Incoming ({pendingReceived.length})
+              </h4>
               <ul className="space-y-2 mb-6">
                 {pendingReceived.map(requestUser => (
                   <UserListItem
@@ -157,9 +161,9 @@ export default function FriendsPage() {
           )}
           {pendingSent.length > 0 && (
              <>
-              <h3 className="text-sm font-semibold text-muted-foreground mb-2">
-                OUTGOING FRIEND REQUESTS — {pendingSent.length}
-              </h3>
+              <h4 className="text-sm font-medium text-foreground mt-4 mb-2 px-2">
+                Outgoing ({pendingSent.length})
+              </h4>
               <ul className="space-y-2">
                 {pendingSent.map(requestUser => (
                   <UserListItem

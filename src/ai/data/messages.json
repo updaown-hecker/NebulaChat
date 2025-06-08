@@ -588,6 +588,42 @@
     "content": "thats good",
     "timestamp": 1749357541200,
     "replyToMessageId": "msg-1749357531077-ov6g2",
-    "replyToUsername": "admin"
+    "replyToUsername": "admin",
+    "isEdited": false
+  },
+  {
+    "id": "msg-1749357616720-bdwax",
+    "roomId": "dm_user-1749343151620-twocj_user1",
+    "userId": "user1",
+    "username": "admin",
+    "content": "hi",
+    "timestamp": 1749357616720,
+    "isEdited": false
+  },
+  {
+    "id": "msg-1749357681423-4zmpy",
+    "roomId": "dm_user-1749343151620-twocj_user1",
+    "userId": "user-1749337377092-9f2f7",
+    "username": "updaown",
+    "content": "hiiii",
+    "timestamp": 1749357681423,
+    "isEdited": false
+  },
+  {
+    "id": "msg-1749357688919-zjsya",
+    "roomId": "dm_user-1749337377092-9f2f7_user1",
+    "userId": "user-1749337377092-9f2f7",
+    "username": "updaown",
+    "content": "hiii",
+    "timestamp": 1749357688919,
+    "isEdited": false
+  },
+  {
+    "id": "msg-1749357853838-gaepa",
+    "roomId": "general",
+    "userId": "user-1749337377092-9f2f7",
+    "username": "updaown",
+    "content": "hello everyone",
+    "timestamp": 1749357853838
   }
 ]
