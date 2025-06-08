@@ -18,6 +18,7 @@ import {
   LOCAL_STORAGE_UNREAD_ROOM_IDS_KEY
 } from '@/lib/constants';
 import { useToast } from '@/hooks/use-toast';
+import { useRouter } from 'next/navigation'; // Import useRouter
 
 interface ChatContextType {
   rooms: Room[];
@@ -66,6 +67,7 @@ const TYPING_DEBOUNCE_TIME = 500;
 export const ChatProvider = ({ children }: { children: ReactNode }) => {
   const { user, updateUser: updateAuthUser } = useAuth(); // Added updateAuthUser
   const { toast } = useToast();
+  const router = useRouter(); // Initialize router
   const [rooms, setRooms] = useLocalStorage<Room[]>(LOCAL_STORAGE_ROOMS_KEY, []);
   const [messages, setMessages] = useLocalStorage<Message[]>(LOCAL_STORAGE_MESSAGES_KEY, []);
   const [allUsers, setAllUsers] = useLocalStorage<User[]>('nebulaChatAllUsers', []);
@@ -313,8 +315,9 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
                 console.error("Failed to sync public room membership update to server (simulation):", error)
             );
         }
+        router.push('/chat'); // Navigate to chat page
     }
-  }, [user, rooms, setRooms, setCurrentRoom, setLastActiveRoomId, setUnreadRoomIds, toast]);
+  }, [user, rooms, setRooms, setCurrentRoom, setLastActiveRoomId, setUnreadRoomIds, toast, router]);
 
   useEffect(() => {
     if (isLoadingInitialData || rooms.length === 0) return;
@@ -785,3 +788,5 @@ export const useChat = (): ChatContextType => {
   }
   return context;
 };
+
+    
