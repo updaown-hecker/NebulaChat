@@ -3,13 +3,12 @@
     "id": "user1",
     "username": "admin",
     "password": "admin123",
-    "isTypingInRoomId": "dm_user-1749337377092-9f2f7_user1",
-    "friendIds": [],
-    "pendingFriendRequestsReceived": [],
-    "sentFriendRequests": [
-      "user-1749343151620-twocj",
-      "user2"
+    "isTypingInRoomId": null,
+    "friendIds": [
+      "user-1749337377092-9f2f7"
     ],
+    "pendingFriendRequestsReceived": [],
+    "sentFriendRequests": [],
     "isAdmin": true
   },
   {
@@ -17,9 +16,7 @@
     "username": "Bob",
     "isTypingInRoomId": null,
     "friendIds": [],
-    "pendingFriendRequestsReceived": [
-      "user1"
-    ],
+    "pendingFriendRequestsReceived": [],
     "sentFriendRequests": [],
     "isAdmin": false
   },
@@ -29,7 +26,9 @@
     "password": "1",
     "isGuest": false,
     "isTypingInRoomId": null,
-    "friendIds": [],
+    "friendIds": [
+      "user1"
+    ],
     "pendingFriendRequestsReceived": [],
     "sentFriendRequests": [],
     "isAdmin": false
@@ -41,9 +40,7 @@
     "isGuest": false,
     "isTypingInRoomId": null,
     "friendIds": [],
-    "pendingFriendRequestsReceived": [
-      "user1"
-    ],
+    "pendingFriendRequestsReceived": [],
     "sentFriendRequests": [],
     "isAdmin": false
   }

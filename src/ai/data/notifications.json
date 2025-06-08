@@ -57,5 +57,40 @@
     "isRead": false,
     "actorId": "user1",
     "actorUsername": "admin"
+  },
+  {
+    "id": "notif-1749356397124-iezm2",
+    "userId": "user-1749337377092-9f2f7",
+    "type": "friend_request_received",
+    "message": "admin sent you a friend request.",
+    "link": "/chat/friends",
+    "timestamp": 1749356397124,
+    "isRead": false,
+    "actorId": "user1",
+    "actorUsername": "admin"
+  },
+  {
+    "id": "notif-1749356403329-sxf78",
+    "userId": "user1",
+    "type": "generic",
+    "message": "updaown accepted your friend request.",
+    "link": "/chat/friends",
+    "timestamp": 1749356403329,
+    "isRead": true,
+    "actorId": "user-1749337377092-9f2f7",
+    "actorUsername": "updaown"
+  },
+  {
+    "id": "notif-1749356423927-udajc",
+    "userId": "user-1749337377092-9f2f7",
+    "type": "room_invite",
+    "message": "admin invited you to the private room: \"nuh uh\".",
+    "link": "/chat?roomId=room-1749349989613-p3zjr",
+    "timestamp": 1749356423927,
+    "isRead": false,
+    "actorId": "user1",
+    "actorUsername": "admin",
+    "roomId": "room-1749349989613-p3zjr",
+    "roomName": "nuh uh"
   }
 ]

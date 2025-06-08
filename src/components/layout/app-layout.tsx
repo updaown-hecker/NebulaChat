@@ -31,7 +31,7 @@ export function AppLayout({ children }: AppLayoutProps) {
 
   return (
     <SidebarProvider defaultOpen={true}>
-      <div className="flex h-screen flex-col w-full"> {/* Added w-full */}
+      <div className="flex h-screen flex-col w-full">
         <Header 
           isDesktopRightSidebarOpen={isDesktopRightSidebarOpen}
           toggleDesktopRightSidebar={toggleDesktopRightSidebar}
@@ -46,7 +46,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           
           <SidebarInset className="flex flex-col flex-1 overflow-hidden !m-0 !rounded-none !shadow-none">
             {/* Main content area (Chat) */}
-            <main className="flex-1 overflow-y-auto">
+            <main className="flex-1 overflow-y-auto pt-16">
               {children}
             </main>
           </SidebarInset>

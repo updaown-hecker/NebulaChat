@@ -395,6 +395,60 @@
     "userId": "user1",
     "username": "admin",
     "content": "hii",
-    "timestamp": 1749353084081
+    "timestamp": 1749353084081,
+    "isEdited": false
+  },
+  {
+    "id": "msg-1749356442711-ktk4m",
+    "roomId": "dm_user-1749337377092-9f2f7_user1",
+    "userId": "user-1749337377092-9f2f7",
+    "username": "updaown",
+    "content": "hi",
+    "timestamp": 1749356442711,
+    "isEdited": false
+  },
+  {
+    "id": "msg-1749356465704-8qd6l",
+    "roomId": "dm_user-1749337377092-9f2f7_user1",
+    "userId": "user1",
+    "username": "admin",
+    "content": "hiii",
+    "timestamp": 1749356465704,
+    "isEdited": false
+  },
+  {
+    "id": "msg-1749356539479-c1w2y",
+    "roomId": "room-1749349989613-p3zjr",
+    "userId": "user-1749337377092-9f2f7",
+    "username": "updaown",
+    "content": "nuh uh",
+    "timestamp": 1749356539479,
+    "isEdited": false
+  },
+  {
+    "id": "msg-1749356541567-0u41k",
+    "roomId": "room-1749349989613-p3zjr",
+    "userId": "user-1749337377092-9f2f7",
+    "username": "updaown",
+    "content": "nuh",
+    "timestamp": 1749356541567,
+    "isEdited": false
+  },
+  {
+    "id": "msg-1749356543911-p6sxo",
+    "roomId": "room-1749349989613-p3zjr",
+    "userId": "user-1749337377092-9f2f7",
+    "username": "updaown",
+    "content": "uh",
+    "timestamp": 1749356543911,
+    "isEdited": false
+  },
+  {
+    "id": "msg-1749356551543-bwz8c",
+    "roomId": "room-1749349989613-p3zjr",
+    "userId": "user1",
+    "username": "admin",
+    "content": "yes uh",
+    "timestamp": 1749356551543
   }
 ]
