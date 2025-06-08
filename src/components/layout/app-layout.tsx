@@ -31,7 +31,7 @@ export function AppLayout({ children }: AppLayoutProps) {
 
   return (
     <SidebarProvider defaultOpen={true}>
-      <div className="flex h-screen flex-col">
+      <div className="flex h-screen flex-col w-full"> {/* Added w-full */}
         <Header 
           isDesktopRightSidebarOpen={isDesktopRightSidebarOpen}
           toggleDesktopRightSidebar={toggleDesktopRightSidebar}
