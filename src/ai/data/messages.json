@@ -633,6 +633,42 @@
     "userId": "user1",
     "username": "admin",
     "content": "hii",
-    "timestamp": 1749358206636
+    "timestamp": 1749358206636,
+    "isEdited": false
+  },
+  {
+    "id": "msg-1749494693078-3b0dk",
+    "roomId": "general",
+    "userId": "user1",
+    "username": "admin",
+    "content": "hii",
+    "timestamp": 1749494693078,
+    "isEdited": false
+  },
+  {
+    "id": "msg-1749494720753-feec1",
+    "roomId": "general",
+    "userId": "user-1749343151620-twocj",
+    "username": "Ben",
+    "content": "hi",
+    "timestamp": 1749494720753,
+    "isEdited": false
+  },
+  {
+    "id": "msg-1749494731817-tqzmf",
+    "roomId": "general",
+    "userId": "user-1749343151620-twocj",
+    "username": "Ben",
+    "content": "hi",
+    "timestamp": 1749494731817,
+    "isEdited": false
+  },
+  {
+    "id": "msg-1749494744969-ibmoy",
+    "roomId": "general",
+    "userId": "user1",
+    "username": "admin",
+    "content": "yes hi",
+    "timestamp": 1749494744969
   }
 ]
