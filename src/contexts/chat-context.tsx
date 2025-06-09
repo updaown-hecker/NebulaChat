@@ -61,14 +61,15 @@ const DEFAULT_INITIAL_MESSAGES: Message[] = [
   { id: 'msg-fallback', roomId: 'general-fallback', userId: 'system', username: 'System', content: 'Welcome! Initializing chat...', timestamp: Date.now() },
 ];
 
-const POLLING_INTERVAL = 3000; // Changed from 7000 to 3000
+const ACTIVE_POLLING_INTERVAL = 1000; // 1 second for active chat view
+const BACKGROUND_POLLING_INTERVAL = 5000; // 5 seconds for background
 const TYPING_DEBOUNCE_TIME = 500;
 
 export const ChatProvider = ({ children }: { children: ReactNode }) => {
   const { user, updateUser: updateAuthUser } = useAuth(); // Added updateAuthUser
   const { toast } = useToast();
-  const router = useRouter(); // Initialize router
-  const pathname = usePathname(); // Get current pathname
+  const router = useRouter(); 
+  const pathname = usePathname(); 
   const [rooms, setRooms] = useLocalStorage<Room[]>(LOCAL_STORAGE_ROOMS_KEY, []);
   const [messages, setMessages] = useLocalStorage<Message[]>(LOCAL_STORAGE_MESSAGES_KEY, []);
   const [allUsers, setAllUsers] = useLocalStorage<User[]>('nebulaChatAllUsers', []);
@@ -256,11 +257,20 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (isLoadingInitialData) return;
+
+    const currentPollingInterval =
+      pathname === '/chat' 
+        ? ACTIVE_POLLING_INTERVAL
+        : BACKGROUND_POLLING_INTERVAL;
+
     const intervalId = setInterval(() => {
       fetchAndUpdateChatData(false);
-    }, POLLING_INTERVAL);
-    return () => clearInterval(intervalId);
-  }, [isLoadingInitialData, fetchAndUpdateChatData]);
+    }, currentPollingInterval);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [isLoadingInitialData, fetchAndUpdateChatData, pathname]);
 
   useEffect(() => {
     if (currentRoom && allUsers.length > 0) {
@@ -316,9 +326,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
                 console.error("Failed to sync public room membership update to server (simulation):", error)
             );
         }
-        // Conditional navigation:
-        // If joining a group room, or if currently not on /chat/friends page, navigate to /chat.
-        // If joining a DM and already on /chat/friends, stay on /chat/friends.
+        
         const isDmRoom = roomToJoin.id.startsWith('dm_');
         if (!isDmRoom || pathname !== '/chat/friends') {
             router.push('/chat');
@@ -339,14 +347,12 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     }
 
     if (!roomToAutoJoin && rooms.length > 0) {
-        // Prioritize non-DM rooms if not already in a DM context (i.e., not on /chat/friends)
         if (pathname !== '/chat/friends') {
             roomToAutoJoin = rooms.find(r => r.id === 'general' && !r.id.startsWith('dm_') && (!r.isPrivate || (user && r.members.includes(user.id)))) ||
                              rooms.find(r => !r.id.startsWith('dm_') && !r.isPrivate && (user ? r.members.includes(user.id) : true)) ||
                              rooms.find(r => !r.id.startsWith('dm_') && user && r.members.includes(user.id)) ||
                              rooms.find(r => !r.id.startsWith('dm_'));
         }
-        // If still no room, or on /chat/friends, consider any room
         if (!roomToAutoJoin) {
              roomToAutoJoin = rooms.find(r => r.id === 'general' && (!r.isPrivate || (user && r.members.includes(user.id)))) ||
                          rooms.find(r => !r.isPrivate && (user ? r.members.includes(user.id) : true)) ||
@@ -365,7 +371,6 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
             if (firstPublicValidRoom) joinRoom(firstPublicValidRoom.id);
         }
     } else if (!roomToAutoJoin && currentRoom) {
-        // If current room is invalid (e.g. private and user no longer member)
         if (currentRoom.isPrivate && user && !currentRoom.members.includes(user.id)) {
             const firstPublicValidRoom = rooms.find(r => !r.isPrivate && (!r.id.startsWith('dm_') || pathname === '/chat/friends'));
             if (firstPublicValidRoom) joinRoom(firstPublicValidRoom.id); else setCurrentRoom(null);
@@ -415,20 +420,18 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     let finalRoomsToSync = [...rooms];
 
     if (existingDM) {
-      // If DM exists, ensure current user is a member (handles rejoining after leaving)
       if (!existingDM.members.includes(user.id)) {
         existingDM = { ...existingDM, members: [...new Set([...existingDM.members, user.id])].sort() };
         finalRoomsToSync = finalRoomsToSync.map(r => r.id === existingDM!.id ? existingDM : r);
         roomsListChanged = true;
       }
     } else {
-      // Create new DM room
       existingDM = {
         id: dmRoomId,
         name: `DM: ${user.username} & ${otherUser.username}`, 
         isPrivate: true,
         members: [user.id, otherUserId].sort(), 
-        ownerId: user.id, // Or null/system for DMs, owner might not be strictly needed for DMs
+        ownerId: user.id, 
       };
       finalRoomsToSync.push(existingDM);
       roomsListChanged = true;
@@ -441,9 +444,8 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       } catch (error) {
         console.error("Failed to sync DM room:", error);
         toast({title: "Error", description: "Could not update DM room on server.", variant: "destructive"});
-        // Revert local state if server sync fails
         setRooms(rooms); 
-        return; // Don't proceed to join if sync failed
+        return; 
       }
     }
     joinRoom(existingDM.id);
@@ -609,10 +611,6 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
 
   const searchAllUsers = useCallback(async (query: string) => {
     if (!user) return;
-    // if (!query.trim()) { // Keep this commented to allow fetching all users with empty query
-    //   setSearchedUsers([]);
-    //   return;
-    // }
     try {
       const result = await searchUsers({ query, currentUserId: user.id });
       setSearchedUsers(result.users);
@@ -629,9 +627,9 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       const response = await sendFriendRequestFlow({ requesterId: user.id, recipientId });
       toast({ title: response.success ? "Success" : "Error", description: response.message, variant: response.success ? "default" : "destructive" });
       if (response.success) {
-        await refreshAllUsers(); // Refreshes all users list from "server"
+        await refreshAllUsers(); 
         if (response.updatedRequester && response.updatedRequester.id === user.id) {
-            updateAuthUser(response.updatedRequester); // Update current user in AuthContext
+            updateAuthUser(response.updatedRequester); 
         }
       }
       return response.success;
@@ -738,8 +736,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         const response = await leaveDmRoomFlow({ userId: user.id, roomId });
         toast({ title: response.success ? "DM Hidden" : "Error", description: response.message, variant: response.success ? "default" : "destructive" });
         if (response.success) {
-            await refreshAllData(false); // Refresh all data to update room list, no separate toast
-            // If the current room was the one left, switch to a default/general room
+            await refreshAllData(false); 
             if (currentRoomRef.current && currentRoomRef.current.id === roomId) {
                 const generalRoom = rooms.find(r => r.id === 'general' && (!r.isPrivate || r.members.includes(user.id))) || rooms.find(r => !r.isPrivate && r.members.includes(user.id)) || rooms.find(r => !r.isPrivate);
                 if (generalRoom) {
@@ -805,7 +802,3 @@ export const useChat = (): ChatContextType => {
   }
   return context;
 };
-
-    
-
-    
