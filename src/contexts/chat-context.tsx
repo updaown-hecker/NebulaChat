@@ -61,7 +61,7 @@ const DEFAULT_INITIAL_MESSAGES: Message[] = [
   { id: 'msg-fallback', roomId: 'general-fallback', userId: 'system', username: 'System', content: 'Welcome! Initializing chat...', timestamp: Date.now() },
 ];
 
-const POLLING_INTERVAL = 7000;
+const POLLING_INTERVAL = 3000; // Changed from 7000 to 3000
 const TYPING_DEBOUNCE_TIME = 500;
 
 export const ChatProvider = ({ children }: { children: ReactNode }) => {
@@ -805,5 +805,7 @@ export const useChat = (): ChatContextType => {
   }
   return context;
 };
+
+    
 
     
