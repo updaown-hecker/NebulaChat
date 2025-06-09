@@ -31,21 +31,20 @@ const nextConfig: NextConfig = {
     // Important: return the modified config
     return config;
   },
-  // The 'experimental.turbopack' configuration was removed because Next.js 15.3.3
-  // reported 'turbopack' as an unrecognized key within the 'experimental' object.
-  // This fixed the immediate config validation error.
-  // However, this means there's no explicit Turbopack config for 'async_hooks' aliasing.
-  // If 'async_hooks' issues persist with Turbopack, a different approach for this Next.js
-  // version might be needed, or it could indicate a bug in Next.js 15.3.3 config handling.
-  // The Webpack fallback for 'async_hooks' remains.
+  // Turbopack specific configuration
+  turbo: {
+    resolveAlias: {
+      // Alias async_hooks to false for the browser (client-side) environment
+      // This mimics the webpack resolve.fallback behavior for Turbopack
+      browser: {
+        async_hooks: false,
+      },
+    },
+  },
   ...(process.env.NODE_ENV === 'development' && {
     devIndicators: {
-      position: 'bottom-right', // Renamed from buildActivityPosition
+      position: 'bottom-right',
     },
-    // The 'experimental.allowedDevOrigins' configuration was removed because Next.js 15.3.3
-    // reported 'allowedDevOrigins' as an unrecognized key within the 'experimental' object.
-    // This fixed the config validation error, but the cross-origin warning may reappear.
-    // This might indicate a bug or specific behavior in Next.js 15.3.3 with Turbopack.
   }),
 };
 
