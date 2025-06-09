@@ -49,8 +49,9 @@ const writeUsersToFile = (users: User[]): void => {
   ensureUsersFileExists();
   try {
     fs.writeFileSync(USERS_FILE_PATH, JSON.stringify(users, null, 2));
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error writing users file in friend-flow:', error);
+    throw new Error(`Failed to write users data in friend-flow: ${error.message}`);
   }
 };
 

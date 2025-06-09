@@ -83,8 +83,9 @@ const writeDataToFile = <T>(filePath: string, data: T): void => {
   ensureDataDirExists();
   try {
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
-  } catch (error) {
+  } catch (error: any) {
     console.error(`Error writing file ${filePath}:`, error);
+    throw new Error(`Failed to write data to ${filePath}: ${error.message}`);
   }
 };
 

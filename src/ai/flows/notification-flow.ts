@@ -53,8 +53,9 @@ const writeNotificationsToFile = (notifications: Notification[]): void => {
   ensureNotificationsFileExists();
   try {
     fs.writeFileSync(NOTIFICATIONS_FILE_PATH, JSON.stringify(notifications, null, 2));
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error writing notifications file:', error);
+    throw new Error(`Failed to write notifications data: ${error.message}`);
   }
 };
 
@@ -226,3 +227,4 @@ const markAllNotificationsAsReadFlow = ai.defineFlow(
         return { success: true, message: "No unread notifications to mark." };
     }
 );
+

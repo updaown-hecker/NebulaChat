@@ -93,8 +93,9 @@ const writeUsersToFile = (users: User[]): void => {
   ensureDataDirExists();
   try {
     fs.writeFileSync(USERS_FILE_PATH, JSON.stringify(users, null, 2));
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error writing users file:', error);
+    throw new Error(`Failed to write users data: ${error.message}`);
   }
 };
 
@@ -203,3 +204,4 @@ const updateUserTypingStatusFlow = ai.defineFlow(
     return { success: true };
   }
 );
+

@@ -45,8 +45,9 @@ const writeRoomsToFile = (rooms: Room[]): void => {
   ensureDataDirExists();
   try {
     fs.writeFileSync(ROOMS_FILE_PATH, JSON.stringify(rooms, null, 2));
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error writing rooms file in room-management-flow:', error);
+    throw new Error(`Failed to write rooms data in room-management-flow: ${error.message}`);
   }
 };
 
@@ -185,3 +186,4 @@ const leaveDmRoomFlow = ai.defineFlow(
         return { success: true, message: "You have left the DM chat." };
     }
 );
+
