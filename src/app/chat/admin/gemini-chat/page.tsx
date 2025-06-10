@@ -189,7 +189,7 @@ export default function AdminGeminiChatPage() {
             placeholder="Chat with Gemini..."
             disabled={isLoading}
             autoFocus
-            className="text-base focus:ring-0 focus:ring-offset-0 focus:shadow-[0_0_0_3px_hsl(var(--primary)/0.4)] focus:border-primary transition-all duration-150"
+            className="text-base focus:border-transparent focus:ring-0 focus:ring-offset-0 focus:shadow-[0_0_0_2px_hsl(var(--background)),_0_0_0_4px_hsl(var(--primary)/0.5),_0_0_10px_4px_hsl(var(--accent)/0.3)] transition-all duration-150"
           />
           <Button type="submit" disabled={isLoading || !inputValue.trim()} size="icon">
             {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}

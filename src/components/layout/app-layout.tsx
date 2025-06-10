@@ -37,7 +37,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           toggleDesktopRightSidebar={toggleDesktopRightSidebar}
         />
         <div className="flex flex-1 overflow-hidden">
-          <Sidebar side="left" variant="sidebar" collapsible="icon" className="shadow-lg">
+          <Sidebar side="left" variant="sidebar" collapsible="icon" className="shadow-lg flex-shrink-0">
             <SidebarContent>
               <LeftSidebar />
             </SidebarContent>
@@ -51,7 +51,7 @@ export function AppLayout({ children }: AppLayoutProps) {
 
           {/* Right Sidebar - manually toggled for desktop */}
           <aside className={cn(
-            "w-72 border-l bg-card shadow-md overflow-y-auto transition-all duration-300 ease-in-out",
+            "w-72 border-l bg-card shadow-md overflow-y-auto transition-all duration-300 ease-in-out flex-shrink-0",
             isMobile ? "hidden" : (isDesktopRightSidebarOpen ? "block" : "hidden")
           )}>
              <RightSidebar />
@@ -61,3 +61,4 @@ export function AppLayout({ children }: AppLayoutProps) {
     </SidebarProvider>
   );
 }
+
