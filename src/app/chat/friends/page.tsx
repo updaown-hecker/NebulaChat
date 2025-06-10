@@ -23,30 +23,24 @@ export default function FriendsPage() {
   const {
     allUsers,
     rooms,
-    currentRoom, // We'll use this to know if a DM is selected
+    currentRoom, 
     sendFriendRequest,
     acceptFriendRequest,
     declineOrCancelFriendRequest,
     removeFriend,
     startDirectMessage,
-    refreshAllUsers,
-    joinRoom, // Need to call joinRoom when a DM is clicked
+    joinRoom, 
   } = useChat();
 
   const [activeView, setActiveView] = useState<ActiveFriendsView>('dm_chat');
 
-  useEffect(() => {
-    refreshAllUsers();
-  }, [currentUser, refreshAllUsers]);
+  // Removed useEffect that called refreshAllUsers()
+  // Data is now primarily sourced from ChatContext's polled updates
 
-  // If currentRoom changes to a DM, switch to DM chat view
   useEffect(() => {
     if (currentRoom && currentRoom.id.startsWith('dm_')) {
       setActiveView('dm_chat');
     }
-    // If currentRoom becomes null or not a DM, and we were in dm_chat view,
-    // perhaps switch to a default view like 'all_friends' or a placeholder.
-    // For now, it will just show nothing in the chat area if currentRoom is not a DM.
   }, [currentRoom]);
 
 
@@ -78,13 +72,16 @@ export default function FriendsPage() {
     if (targetUser) {
       await sendFriendRequest(targetUser.id);
     } else {
-      if (username.trim() === currentUser.username.trim()){
-         return;
+      if (username.trim().toLowerCase() === currentUser.username.trim().toLowerCase()){
+         // User trying to add themselves, perhaps show a toast or just ignore
+         console.warn("User tried to add themselves as a friend.");
+         return; 
       }
       const recipient = allUsers.find(u => u.username.toLowerCase() === username.toLowerCase());
       if (recipient) {
         await sendFriendRequest(recipient.id);
       }
+      // Optionally, add a toast here if username is not found at all
     }
   };
 
@@ -93,8 +90,6 @@ export default function FriendsPage() {
       if (currentRoom && currentRoom.id.startsWith('dm_')) {
         return (
           <>
-            {/* Optionally, a header for the current DM can be added here */}
-            {/* Example: <div className="p-4 border-b text-lg font-semibold">{currentRoom.name}</div> */}
             <MessageList />
             <ChatInput />
           </>
@@ -104,6 +99,7 @@ export default function FriendsPage() {
         <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-4">
           <MessageCircle size={48} className="mb-4 opacity-50" />
           <p className="text-center">Select a conversation to start chatting.</p>
+          <p className="text-xs text-center mt-2">Or, find users to start a new DM!</p>
         </div>
       );
     }
@@ -122,7 +118,7 @@ export default function FriendsPage() {
                   user={friend}
                   currentUser={currentUser}
                   type="friend"
-                  onMessage={() => joinRoom(startDirectMessage(friend.id) && `dm_${[currentUser.id, friend.id].sort().join('_')}`)} // joinRoom expects roomId
+                  onMessage={() => joinRoom(startDirectMessage(friend.id) && `dm_${[currentUser.id, friend.id].sort().join('_')}`)}
                   onRemoveFriend={() => removeFriend(friend.id)}
                 />
               ))}
@@ -188,7 +184,6 @@ export default function FriendsPage() {
 
   return (
     <div className="flex h-full w-full">
-      {/* Left Panel */}
       <div className="w-72 flex-shrink-0 border-r bg-card flex flex-col">
         <div className="p-4 border-b">
           <AddFriendInput onAddFriend={handleAddFriend} />
@@ -213,13 +208,10 @@ export default function FriendsPage() {
             <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-2 mb-1">Direct Messages</h3>
         </div>
         <ScrollArea className="flex-1 min-h-0">
-          {/* DirectMessageList will call joinRoom, which sets currentRoom.
-              The useEffect above will then set activeView to 'dm_chat'. */}
           <DirectMessageList />
         </ScrollArea>
       </div>
 
-      {/* Right Panel */}
       <div className="flex-1 flex flex-col bg-background">
         {renderRightPanelContent()}
       </div>
