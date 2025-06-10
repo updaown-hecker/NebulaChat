@@ -18,7 +18,7 @@ import { cn } from '@/lib/utils';
 export function RightSidebar() {
   const { 
     currentRoom, 
-    allUsers: contextAllUsers, // Renamed to avoid conflict with local allUsers if any
+    allUsers: contextAllUsers, 
     typingUsers, 
     startDirectMessage,
     searchedUsers,
@@ -33,17 +33,16 @@ export function RightSidebar() {
   const [searchQuery, setSearchQuery] = useState('');
   const { toast } = useToast();
 
-  // Fetch initial list of users when component mounts and when currentUser changes
   useEffect(() => {
-    if (currentUser) { // Ensure currentUser is available before searching
-      searchAllUsers(''); // Fetch all users initially
+    if (currentUser) { 
+      searchAllUsers(''); 
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser?.id]); // Rerun if currentUser.id changes
+  }, [currentUser?.id]); 
 
   useEffect(() => {
     const debounceTimer = setTimeout(() => {
-      if (currentUser) { // Ensure currentUser is available
+      if (currentUser) { 
          searchAllUsers(searchQuery.trim());
       }
     }, 300);
@@ -129,17 +128,15 @@ export function RightSidebar() {
     return <div className="ml-auto flex items-center space-x-1">{actionButtons}</div>;
   };
   
-  // Always use searchedUsers as the source of truth for display,
-  // as it's populated by searchAllUsers which directly queries the "backend" (JSON files).
   const usersToDisplay = searchedUsers.filter(u => u.id !== currentUser?.id);
-  
   const friends = contextAllUsers.filter(u => currentUser?.friendIds?.includes(u.id));
   const pendingRequests = contextAllUsers.filter(u => currentUser?.pendingFriendRequestsReceived?.includes(u.id));
 
 
   return (
     <ScrollArea className="h-full">
-      <div className="px-4 pt-20 pb-4 space-y-6"> {/* Changed pt-16 to pt-20 */}
+      {/* Content is positioned below the main header due to AppLayout structure */}
+      <div className="px-4 pt-4 pb-4 space-y-6"> 
         {currentRoom && (
           <>
             <div>

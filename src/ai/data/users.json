@@ -3,7 +3,7 @@
     "id": "user1",
     "username": "admin",
     "password": "admin123",
-    "isTypingInRoomId": "room-1749357495875-9wmys",
+    "isTypingInRoomId": null,
     "friendIds": [
       "user-1749337377092-9f2f7",
       "user-1749343151620-twocj"
@@ -30,7 +30,7 @@
     "username": "updaown",
     "password": "1",
     "isGuest": false,
-    "isTypingInRoomId": "general",
+    "isTypingInRoomId": null,
     "friendIds": [
       "user1",
       "user-1749343151620-twocj"

@@ -192,7 +192,7 @@
     "message": "Ben accepted your friend request.",
     "link": "/chat/friends",
     "timestamp": 1749425752218,
-    "isRead": false,
+    "isRead": true,
     "actorId": "user-1749343151620-twocj",
     "actorUsername": "Ben"
   },

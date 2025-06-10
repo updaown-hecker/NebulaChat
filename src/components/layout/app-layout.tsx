@@ -44,11 +44,9 @@ export function AppLayout({ children }: AppLayoutProps) {
             <SidebarRail />
           </Sidebar>
           
-          <SidebarInset className="flex flex-col flex-1 overflow-hidden !m-0 !rounded-none !shadow-none">
-            {/* Main content area (Chat) */}
-            <main className="flex-1 overflow-y-auto pt-16">
-              {children}
-            </main>
+          <SidebarInset className="flex-1 overflow-y-auto pt-16 !m-0 !rounded-none !shadow-none">
+            {/* Main content area (Chat), SidebarInset is a <main> tag */}
+            {children}
           </SidebarInset>
 
           {/* Right Sidebar - manually toggled for desktop */}

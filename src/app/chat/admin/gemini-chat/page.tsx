@@ -8,10 +8,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Bot, Send, Loader2, ShieldAlert, UserCircle } from 'lucide-react';
+import { Bot, Send, Loader2, ShieldAlert, UserCircle, PlusCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { geminiChat, type GeminiChatInput, type GeminiChatOutput } from '@/ai/flows/gemini-chat-flow';
 import { useToast } from '@/hooks/use-toast';
+import useLocalStorage from '@/hooks/use-local-storage';
+import { LOCAL_STORAGE_AI_CHAT_MESSAGES_KEY } from '@/lib/constants';
 
 interface ChatMessage {
   id: string;
@@ -25,7 +27,7 @@ export default function AdminGeminiChatPage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatMessages, setChatMessages] = useLocalStorage<ChatMessage[]>(LOCAL_STORAGE_AI_CHAT_MESSAGES_KEY, []);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const scrollAreaViewportRef = useRef<HTMLDivElement>(null);
@@ -94,6 +96,14 @@ export default function AdminGeminiChatPage() {
     }
   };
 
+  const handleNewChat = () => {
+    setChatMessages([]); // This will also clear local storage due to useLocalStorage hook
+    toast({
+      title: "New Chat Started",
+      description: "Previous AI conversation has been cleared.",
+    });
+  };
+
   if (user === undefined) {
     return (
       <div className="flex flex-1 items-center justify-center p-6">
@@ -121,6 +131,12 @@ export default function AdminGeminiChatPage() {
 
   return (
     <div className="flex flex-1 flex-col h-full">
+      <div className="p-3 border-b bg-background flex justify-between items-center">
+        <h2 className="text-lg font-semibold">Chat with Gemini AI</h2>
+        <Button variant="outline" size="sm" onClick={handleNewChat}>
+          <PlusCircle className="mr-2 h-4 w-4" /> New Chat
+        </Button>
+      </div>
       <ScrollArea className="flex-1 p-4" viewportRef={scrollAreaViewportRef}>
         <div className="space-y-4 mb-4">
           {chatMessages.map((msg) => (

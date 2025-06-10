@@ -669,6 +669,15 @@
     "userId": "user1",
     "username": "admin",
     "content": "yes hi",
-    "timestamp": 1749494744969
+    "timestamp": 1749494744969,
+    "isEdited": false
+  },
+  {
+    "id": "msg-1749525644168-a39r6",
+    "roomId": "dev-talk",
+    "userId": "user1",
+    "username": "admin",
+    "content": "no one here?",
+    "timestamp": 1749525644168
   }
 ]
