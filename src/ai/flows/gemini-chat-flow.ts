@@ -7,7 +7,7 @@
  * - GeminiChatOutput: Output type for Gemini's response.
  */
 import { ai } from '@/ai/genkit';
-import { z } from 'genkit/zod'; // Use Genkit's re-export of Zod
+import { z } from 'zod'; // Use Zod directly
 
 export const GeminiChatInputSchema = z.object({
   prompt: z.string().describe("The admin user's message to send to Gemini."),
