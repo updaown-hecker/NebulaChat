@@ -33,19 +33,19 @@ export default function AdminGeminiChatPage() {
   const scrollAreaViewportRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (user === undefined) return; // Auth context still loading
+    if (user === undefined) return; 
     if (!user || !user.isAdmin) {
       toast({
         title: "Access Denied",
         description: "You must be an administrator to access this page.",
         variant: "destructive",
       });
-      router.replace('/chat'); // Redirect to a safe page
+      router.replace('/chat'); 
     }
   }, [user, router, toast]);
 
   useEffect(() => {
-    // Scroll to bottom when messages change
+    
     if (scrollAreaViewportRef.current) {
       scrollAreaViewportRef.current.scrollTop = scrollAreaViewportRef.current.scrollHeight;
     }
@@ -97,7 +97,7 @@ export default function AdminGeminiChatPage() {
   };
 
   const handleNewChat = () => {
-    setChatMessages([]); // This will also clear local storage due to useLocalStorage hook
+    setChatMessages([]); 
     toast({
       title: "New Chat Started",
       description: "Previous AI conversation has been cleared.",
@@ -106,7 +106,7 @@ export default function AdminGeminiChatPage() {
 
   if (user === undefined) {
     return (
-      <div className="flex flex-1 items-center justify-center p-6">
+      <div className="flex h-full items-center justify-center p-6">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
         <p className="ml-2 text-muted-foreground">Loading user data...</p>
       </div>
@@ -115,7 +115,7 @@ export default function AdminGeminiChatPage() {
   
   if (!user?.isAdmin) {
      return (
-      <div className="flex flex-1 flex-col items-center justify-center p-6 text-center">
+      <div className="flex h-full flex-col items-center justify-center p-6 text-center">
         <ShieldAlert className="h-16 w-16 text-destructive mb-4" />
         <h1 className="text-2xl font-bold">Access Denied</h1>
         <p className="text-muted-foreground">This page is for administrators only.</p>
@@ -130,7 +130,7 @@ export default function AdminGeminiChatPage() {
   };
 
   return (
-    <div className="flex flex-1 flex-col h-full">
+    <div className="flex flex-col h-full">
       <div className="p-3 border-b bg-background flex justify-between items-center">
         <h2 className="text-lg font-semibold">Chat with Gemini AI</h2>
         <Button variant="outline" size="sm" onClick={handleNewChat}>
@@ -189,7 +189,7 @@ export default function AdminGeminiChatPage() {
             placeholder="Chat with Gemini..."
             disabled={isLoading}
             autoFocus
-            className="text-base"
+            className="text-base focus:ring-0 focus:ring-offset-0 focus:shadow-[0_0_0_3px_hsl(var(--primary)/0.4)] focus:border-primary transition-all duration-150"
           />
           <Button type="submit" disabled={isLoading || !inputValue.trim()} size="icon">
             {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
