@@ -9,12 +9,12 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'zod'; // Use Zod directly
 
-export const GeminiChatInputSchema = z.object({
+const GeminiChatInputSchema = z.object({
   prompt: z.string().describe("The admin user's message to send to Gemini."),
 });
 export type GeminiChatInput = z.infer<typeof GeminiChatInputSchema>;
 
-export const GeminiChatOutputSchema = z.object({
+const GeminiChatOutputSchema = z.object({
   response: z.string().describe("Gemini's response to the admin."),
 });
 export type GeminiChatOutput = z.infer<typeof GeminiChatOutputSchema>;
@@ -38,3 +38,4 @@ const geminiChatFlow = ai.defineFlow(
     return { response: llmResponse.text ?? "Sorry, I couldn't generate a response at this moment." };
   }
 );
+
