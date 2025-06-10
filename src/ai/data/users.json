@@ -3,7 +3,7 @@
     "id": "user1",
     "username": "admin",
     "password": "admin123",
-    "isTypingInRoomId": null,
+    "isTypingInRoomId": "room-1749357495875-9wmys",
     "friendIds": [
       "user-1749337377092-9f2f7",
       "user-1749343151620-twocj"
