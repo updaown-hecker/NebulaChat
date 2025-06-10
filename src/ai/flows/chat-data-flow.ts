@@ -99,7 +99,8 @@ const readDataFromFile = <T>(filePath: string, defaultData: T, ensureFields?: (i
   try {
     const fileContent = fs.readFileSync(filePath, 'utf-8');
     if (fileContent.trim() === '') {
-      console.warn(`File ${filePath} is empty. Returning default data. The file will NOT be overwritten with defaults.`);
+      console.warn(`File ${filePath} is empty. Initializing with default data.`);
+      writeDataToFile(filePath, defaultData); // Fix: Write default data to the empty file
       return defaultData;
     }
     let jsonData = JSON.parse(fileContent) as T;
@@ -113,7 +114,8 @@ const readDataFromFile = <T>(filePath: string, defaultData: T, ensureFields?: (i
     console.error(`Error parsing JSON from file ${filePath}:`, error);
     const fileContentForDebug = fs.readFileSync(filePath, 'utf-8');
     console.warn(`Content preview (up to 500 chars): ${fileContentForDebug.substring(0,500)}...`);
-    console.warn(`Returning default data for ${filePath} due to parsing error. The original file has NOT been overwritten.`);
+    console.warn(`File ${filePath} was corrupted or malformed. Initializing with default data.`);
+    writeDataToFile(filePath, defaultData); // Fix: Write default data to the corrupted file
     return defaultData;
   }
 };

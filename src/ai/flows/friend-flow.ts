@@ -14,39 +14,18 @@ import { createNotification } from './notification-flow'; // Import createNotifi
 
 const DATA_DIR = path.join(process.cwd(), 'src', 'ai', 'data');
 const USERS_FILE_PATH = path.join(DATA_DIR, 'users.json');
+const DEFAULT_USERS: User[] = []; // Default to empty array for users
 
-// Helper to ensure data directory exists and initialize users.json if needed
-const ensureUsersFileExists = (defaultUsers: User[] = []): void => {
+// Helper to ensure data directory exists
+const ensureDataDirExists = (): void => {
   if (!fs.existsSync(DATA_DIR)) {
     fs.mkdirSync(DATA_DIR, { recursive: true });
   }
-  if (!fs.existsSync(USERS_FILE_PATH)) {
-    fs.writeFileSync(USERS_FILE_PATH, JSON.stringify(defaultUsers, null, 2));
-  }
 };
 
-export const readUsersFromFile = async (): Promise<User[]> => { // Added export and async
-  ensureUsersFileExists();
-  try {
-    const fileContent = fs.readFileSync(USERS_FILE_PATH, 'utf-8');
-    if (fileContent.trim() === '') return [];
-    const users = JSON.parse(fileContent) as User[];
-    // Ensure new fields exist with defaults
-    return users.map(u => ({
-        ...u,
-        friendIds: u.friendIds || [],
-        pendingFriendRequestsReceived: u.pendingFriendRequestsReceived || [],
-        sentFriendRequests: u.sentFriendRequests || [],
-        isAdmin: u.isAdmin || false, // Ensure isAdmin defaults to false
-    }));
-  } catch (error) {
-    console.error('Error reading users file in friend-flow:', error);
-    return [];
-  }
-};
-
-const writeUsersToFile = (users: User[]): void => {
-  ensureUsersFileExists();
+// Helper to write users to JSON file (already robust)
+const writeUsersToFileInternal = (users: User[]): void => { // Renamed to avoid conflict if imported elsewhere
+  ensureDataDirExists();
   try {
     fs.writeFileSync(USERS_FILE_PATH, JSON.stringify(users, null, 2));
   } catch (error: any) {
@@ -54,6 +33,38 @@ const writeUsersToFile = (users: User[]): void => {
     throw new Error(`Failed to write users data in friend-flow: ${error.message}`);
   }
 };
+
+// Helper to read users from JSON file (updated for robustness)
+export const readUsersFromFile = async (): Promise<User[]> => {
+  ensureDataDirExists();
+  if (!fs.existsSync(USERS_FILE_PATH)) {
+    writeUsersToFileInternal(DEFAULT_USERS); // Initialize if not exists
+    return DEFAULT_USERS;
+  }
+  try {
+    const fileContent = await fs.promises.readFile(USERS_FILE_PATH, 'utf-8');
+    if (fileContent.trim() === '') {
+      console.warn(`File ${USERS_FILE_PATH} is empty. Initializing with default data.`);
+      writeUsersToFileInternal(DEFAULT_USERS);
+      return DEFAULT_USERS;
+    }
+    const users = JSON.parse(fileContent) as User[];
+    // Ensure new fields exist with defaults
+    return users.map(u => ({
+        ...u,
+        friendIds: u.friendIds || [],
+        pendingFriendRequestsReceived: u.pendingFriendRequestsReceived || [],
+        sentFriendRequests: u.sentFriendRequests || [],
+        isAdmin: u.isAdmin || false,
+    }));
+  } catch (error) {
+    console.error(`Error reading or parsing users file ${USERS_FILE_PATH} in friend-flow:`, error);
+    console.warn(`File ${USERS_FILE_PATH} was corrupted or malformed. Initializing with default data.`);
+    writeUsersToFileInternal(DEFAULT_USERS);
+    return DEFAULT_USERS;
+  }
+};
+
 
 // --- Search Users ---
 const SearchUsersInputSchema = z.object({
@@ -155,7 +166,7 @@ const sendFriendRequestFlow = ai.defineFlow(
     
     users[requesterIndex] = requester;
     users[recipientIndex] = recipient;
-    writeUsersToFile(users);
+    writeUsersToFileInternal(users);
 
     // Create notification for the recipient
     await createNotification({
@@ -214,7 +225,7 @@ const acceptFriendRequestFlow = ai.defineFlow(
 
         users[recipientUserIndex] = recipientUser;
         users[requesterUserIndex] = requesterUser;
-        writeUsersToFile(users);
+        writeUsersToFileInternal(users);
         
         // Optionally, notify the original requester that their request was accepted
         await createNotification({
@@ -289,7 +300,7 @@ const declineOrCancelFriendRequestFlow = ai.defineFlow(
 
         users[userIndex] = mainUser;
         users[otherUserIndex] = otherUser;
-        writeUsersToFile(users);
+        writeUsersToFileInternal(users);
 
         const { password: _up, ...userToReturn } = mainUser;
         const { password: _op, ...otherUserToReturn } = otherUser;
@@ -330,7 +341,7 @@ const removeFriendFlow = ai.defineFlow(
 
         users[userIndex] = mainUser;
         users[friendIndex] = friendUser;
-        writeUsersToFile(users);
+        writeUsersToFileInternal(users);
 
         const { password: _up, ...userToReturn } = mainUser;
         const { password: _fp, ...friendToReturn } = friendUser;

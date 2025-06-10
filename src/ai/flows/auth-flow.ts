@@ -54,6 +54,7 @@ export type UpdateTypingStatusOutput = z.infer<typeof UpdateTypingStatusOutputSc
 
 const DATA_DIR = path.join(process.cwd(), 'src', 'ai', 'data');
 const USERS_FILE_PATH = path.join(DATA_DIR, 'users.json');
+const DEFAULT_USERS: User[] = []; // Default to empty array for users
 
 // Helper to ensure data directory exists
 const ensureDataDirExists = () => {
@@ -62,16 +63,31 @@ const ensureDataDirExists = () => {
   }
 };
 
-// Helper to read users from JSON file
+// Helper to write users to JSON file (already robust)
+const writeUsersToFile = (users: User[]): void => {
+  ensureDataDirExists();
+  try {
+    fs.writeFileSync(USERS_FILE_PATH, JSON.stringify(users, null, 2));
+  } catch (error: any) {
+    console.error('Error writing users file:', error);
+    throw new Error(`Failed to write users data: ${error.message}`);
+  }
+};
+
+// Helper to read users from JSON file (updated for robustness)
 const readUsersFromFile = (): User[] => {
   ensureDataDirExists();
   if (!fs.existsSync(USERS_FILE_PATH)) {
-    fs.writeFileSync(USERS_FILE_PATH, JSON.stringify([], null, 2)); // Initialize with empty array if not exists
-    return [];
+    writeUsersToFile(DEFAULT_USERS); // Initialize if not exists
+    return DEFAULT_USERS;
   }
   try {
     const fileContent = fs.readFileSync(USERS_FILE_PATH, 'utf-8');
-    if (fileContent.trim() === '') return []; // Handle empty file
+    if (fileContent.trim() === '') {
+      console.warn(`File ${USERS_FILE_PATH} is empty. Initializing with default data.`);
+      writeUsersToFile(DEFAULT_USERS);
+      return DEFAULT_USERS;
+    }
     const users = JSON.parse(fileContent) as User[];
     // Ensure new fields exist
     return users.map(u => ({
@@ -80,22 +96,13 @@ const readUsersFromFile = (): User[] => {
         friendIds: u.friendIds || [],
         pendingFriendRequestsReceived: u.pendingFriendRequestsReceived || [],
         sentFriendRequests: u.sentFriendRequests || [],
-        isAdmin: u.isAdmin || false, // Default isAdmin to false
+        isAdmin: u.isAdmin || false,
     }));
   } catch (error) {
-    console.error('Error reading users file:', error);
-    return [];
-  }
-};
-
-// Helper to write users to JSON file
-const writeUsersToFile = (users: User[]): void => {
-  ensureDataDirExists();
-  try {
-    fs.writeFileSync(USERS_FILE_PATH, JSON.stringify(users, null, 2));
-  } catch (error: any) {
-    console.error('Error writing users file:', error);
-    throw new Error(`Failed to write users data: ${error.message}`);
+    console.error(`Error reading or parsing users file ${USERS_FILE_PATH}:`, error);
+    console.warn(`File ${USERS_FILE_PATH} was corrupted or malformed. Initializing with default data.`);
+    writeUsersToFile(DEFAULT_USERS);
+    return DEFAULT_USERS;
   }
 };
 

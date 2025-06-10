@@ -15,6 +15,7 @@ import { readUsersFromFile as readAllUsers } from './friend-flow';
 
 const DATA_DIR = path.join(process.cwd(), 'src', 'ai', 'data');
 const ROOMS_FILE_PATH = path.join(DATA_DIR, 'rooms.json');
+const DEFAULT_ROOMS: Room[] = []; // Default to empty array
 
 // Helper to ensure data directory exists
 const ensureDataDirExists = () => {
@@ -23,24 +24,7 @@ const ensureDataDirExists = () => {
   }
 };
 
-// Helper to read rooms from JSON file
-const readRoomsFromFile = (): Room[] => {
-  ensureDataDirExists();
-  if (!fs.existsSync(ROOMS_FILE_PATH)) {
-    fs.writeFileSync(ROOMS_FILE_PATH, JSON.stringify([], null, 2));
-    return [];
-  }
-  try {
-    const fileContent = fs.readFileSync(ROOMS_FILE_PATH, 'utf-8');
-    if (fileContent.trim() === '') return [];
-    return JSON.parse(fileContent) as Room[];
-  } catch (error) {
-    console.error('Error reading rooms file in room-management-flow:', error);
-    return [];
-  }
-};
-
-// Helper to write rooms to JSON file
+// Helper to write rooms to JSON file (already robust)
 const writeRoomsToFile = (rooms: Room[]): void => {
   ensureDataDirExists();
   try {
@@ -50,6 +34,30 @@ const writeRoomsToFile = (rooms: Room[]): void => {
     throw new Error(`Failed to write rooms data in room-management-flow: ${error.message}`);
   }
 };
+
+// Helper to read rooms from JSON file (updated for robustness)
+const readRoomsFromFile = (): Room[] => {
+  ensureDataDirExists();
+  if (!fs.existsSync(ROOMS_FILE_PATH)) {
+    writeRoomsToFile(DEFAULT_ROOMS); // Initialize if not exists
+    return DEFAULT_ROOMS;
+  }
+  try {
+    const fileContent = fs.readFileSync(ROOMS_FILE_PATH, 'utf-8');
+    if (fileContent.trim() === '') {
+      console.warn(`File ${ROOMS_FILE_PATH} is empty. Initializing with default data.`);
+      writeRoomsToFile(DEFAULT_ROOMS);
+      return DEFAULT_ROOMS;
+    }
+    return JSON.parse(fileContent) as Room[];
+  } catch (error) {
+    console.error(`Error reading or parsing rooms file ${ROOMS_FILE_PATH} in room-management-flow:`, error);
+    console.warn(`File ${ROOMS_FILE_PATH} was corrupted or malformed. Initializing with default data.`);
+    writeRoomsToFile(DEFAULT_ROOMS);
+    return DEFAULT_ROOMS;
+  }
+};
+
 
 // --- Invite User to Room ---
 const InviteUserToRoomInputSchema = z.object({

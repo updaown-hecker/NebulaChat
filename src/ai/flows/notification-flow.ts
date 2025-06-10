@@ -18,23 +18,41 @@ import path from 'path';
 
 const DATA_DIR = path.join(process.cwd(), 'src', 'ai', 'data');
 const NOTIFICATIONS_FILE_PATH = path.join(DATA_DIR, 'notifications.json');
+const DEFAULT_NOTIFICATIONS: Notification[] = [];
 
-// Helper to ensure data directory exists and initialize notifications.json if needed
-const ensureNotificationsFileExists = (defaultNotifications: Notification[] = []): void => {
+// Helper to ensure data directory exists
+const ensureDataDirExists = (): void => {
   if (!fs.existsSync(DATA_DIR)) {
     fs.mkdirSync(DATA_DIR, { recursive: true });
   }
-  if (!fs.existsSync(NOTIFICATIONS_FILE_PATH)) {
-    fs.writeFileSync(NOTIFICATIONS_FILE_PATH, JSON.stringify(defaultNotifications, null, 2));
+};
+
+// Helper to write notifications to JSON file (already robust)
+const writeNotificationsToFile = (notifications: Notification[]): void => {
+  ensureDataDirExists();
+  try {
+    fs.writeFileSync(NOTIFICATIONS_FILE_PATH, JSON.stringify(notifications, null, 2));
+  } catch (error: any) {
+    console.error('Error writing notifications file:', error);
+    throw new Error(`Failed to write notifications data: ${error.message}`);
   }
 };
 
+// Helper to read notifications from JSON file (updated for robustness)
 const readNotificationsFromFile = (): Notification[] => {
-  ensureNotificationsFileExists();
+  ensureDataDirExists();
+  if (!fs.existsSync(NOTIFICATIONS_FILE_PATH)) {
+    writeNotificationsToFile(DEFAULT_NOTIFICATIONS); // Initialize if not exists
+    return DEFAULT_NOTIFICATIONS;
+  }
   try {
     const fileContent = fs.readFileSync(NOTIFICATIONS_FILE_PATH, 'utf-8');
-    if (fileContent.trim() === '') return [];
-    // Ensure all fields are present, especially new ones like actorId, actorUsername, roomId, roomName
+    if (fileContent.trim() === '') {
+      console.warn(`File ${NOTIFICATIONS_FILE_PATH} is empty. Initializing with default data.`);
+      writeNotificationsToFile(DEFAULT_NOTIFICATIONS);
+      return DEFAULT_NOTIFICATIONS;
+    }
+    // Ensure all fields are present, especially new ones
     return (JSON.parse(fileContent) as Notification[]).map(n => ({
         ...n,
         isRead: n.isRead || false,
@@ -44,20 +62,13 @@ const readNotificationsFromFile = (): Notification[] => {
         roomName: n.roomName,
     }));
   } catch (error) {
-    console.error('Error reading notifications file:', error);
-    return [];
+    console.error(`Error reading or parsing notifications file ${NOTIFICATIONS_FILE_PATH}:`, error);
+    console.warn(`File ${NOTIFICATIONS_FILE_PATH} was corrupted or malformed. Initializing with default data.`);
+    writeNotificationsToFile(DEFAULT_NOTIFICATIONS);
+    return DEFAULT_NOTIFICATIONS;
   }
 };
 
-const writeNotificationsToFile = (notifications: Notification[]): void => {
-  ensureNotificationsFileExists();
-  try {
-    fs.writeFileSync(NOTIFICATIONS_FILE_PATH, JSON.stringify(notifications, null, 2));
-  } catch (error: any) {
-    console.error('Error writing notifications file:', error);
-    throw new Error(`Failed to write notifications data: ${error.message}`);
-  }
-};
 
 // --- Schemas ---
 const NotificationSchema = z.object({
