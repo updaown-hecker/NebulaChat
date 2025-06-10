@@ -33,7 +33,7 @@ export function LeftSidebar() {
               <SidebarMenuButton
                 asChild
                 isActive={pathname === '/chat/admin/gemini-chat'}
-                className={cn(isActive && "bg-accent text-accent-foreground")} // Ensure active styling
+                // Removed problematic className: cn(isActive && "bg-accent text-accent-foreground")
                 tooltip={{ children: "Chat with AI Assistant", side: "right" }}
               >
                 <Link href="/chat/admin/gemini-chat" className="w-full justify-start gap-2">
